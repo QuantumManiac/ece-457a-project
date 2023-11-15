@@ -1,59 +1,67 @@
-# Battlesnake Python Starter Project
+# ECE457A Project
 
-An official Battlesnake template written in Python. Get started at [play.battlesnake.com](https://play.battlesnake.com).
+## Requirements
 
-![Battlesnake Logo](https://media.battlesnake.com/social/StarterSnakeGitHubRepos_Python.png)
+Running everything on this repo requires:
 
-This project is a great starting point for anyone wanting to program their first Battlesnake in Python. It can be run locally or easily deployed to a cloud provider of your choosing. See the [Battlesnake API Docs](https://docs.battlesnake.com/api) for more detail. 
+- Python 3 for running the the snake logic
+- Go for running the Battlesnake game server locally
 
-[![Run on Replit](https://repl.it/badge/github/BattlesnakeOfficial/starter-snake-python)](https://replit.com/@Battlesnake/starter-snake-python)
+## Getting Started
 
-## Technologies Used
+### Setting up the Project
 
-This project uses [Python 3](https://www.python.org/) and [Flask](https://flask.palletsprojects.com/). It also comes with an optional [Dockerfile](https://docs.docker.com/engine/reference/builder/) to help with deployment.
-
-## Run Your Battlesnake
-
-Install dependencies using pip
+Instructions for setting up the repo is as follows
 
 ```sh
+# Clone the repo
+git clone https://github.com/QuantumManiac/ece-457a-project
+cd ece-457a-project
+
+# Install the battlesnake game engine (added as a git submodule)
+git submodule init
+git submodule update
+
+# Create a virtualenv
+python -m venv venv
+
+# Activate the virtualenv...
+# ...on MacOS/Linux
+source ./venv/bin/activate
+# ...or on Windows
+source ./venv/bin/activate.ps1
+
+# Install dependencies
 pip install -r requirements.txt
+
+# Build the binaries for the battlesnake engine
+cd rules && go build -o ../battlesnake ./cli/battlesnake/main.go
 ```
 
-Start your Battlesnake
+### Running the Snakes
+
+#### Everything all at once
+
+The following command run from the repo's root directory will start a game of battlesnake pitting the two battlesnakes against each other. Note that this will start the game server and the two snakes all in one command,
 
 ```sh
-python main.py
+PORT=8080 python main_game_theory.py & PORT=8081 python main_metaheuristics.py & sleep 1 && ./battlesnake play --name game-theory --url http://127.0.0.1:8080 --name metaheuristics --url http://127.0.0.1:8081 --browser
 ```
 
-You should see the following output once it is running
+#### Running the snakes
+
+Make sure to run the snakes before the server is started.
 
 ```sh
-Running your Battlesnake at http://0.0.0.0:8000
- * Serving Flask app 'My Battlesnake'
- * Debug mode: off
+# Run the game theory snake
+PORT=8080 python main_game_theory.py
+
+# Run the metaheuristics snake
+PORT=8081 python main_metaheuristics.py
 ```
 
-Open [localhost:8000](http://localhost:8000) in your browser and you should see
-
-```json
-{"apiversion":"1","author":"","color":"#888888","head":"default","tail":"default"}
-```
-
-## Play a Game Locally
-
-Install the [Battlesnake CLI](https://github.com/BattlesnakeOfficial/rules/tree/main/cli)
-* You can [download compiled binaries here](https://github.com/BattlesnakeOfficial/rules/releases)
-* or [install as a go package](https://github.com/BattlesnakeOfficial/rules/tree/main/cli#installation) (requires Go 1.18 or higher)
-
-Command to run a local game
+#### Running the game server
 
 ```sh
-battlesnake play -W 11 -H 11 --name 'Python Starter Project' --url http://localhost:8000 -g solo --browser
+./battlesnake play --name game-theory --url http://127.0.0.1:8080 --name metaheuristics --url http://127.0.0.1:8081 --browser
 ```
-
-## Next Steps
-
-Continue with the [Battlesnake Quickstart Guide](https://docs.battlesnake.com/quickstart) to customize and improve your Battlesnake's behavior.
-
-**Note:** To play games on [play.battlesnake.com](https://play.battlesnake.com) you'll need to deploy your Battlesnake to a live web server OR use a port forwarding tool like [ngrok](https://ngrok.com/) to access your server locally.

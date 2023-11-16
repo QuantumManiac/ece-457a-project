@@ -10,8 +10,8 @@
 # To get you started we've included code to prevent your Battlesnake from moving backwards.
 # For more info see docs.battlesnake.com
 
-import random
 import typing
+import math
 
 
 # info is called when you create your Battlesnake on play.battlesnake.com
@@ -23,7 +23,7 @@ def info() -> typing.Dict:
     return {
         "apiversion": "1",
         "author": "",  # TODO: Your Battlesnake Username
-        "color": "#888888",  # TODO: Choose color
+        "color": "#800080",  # TODO: Choose color
         "head": "default",  # TODO: Choose head
         "tail": "default",  # TODO: Choose tail
     }
@@ -43,54 +43,171 @@ def end(game_state: typing.Dict):
 # Valid moves are "up", "down", "left", or "right"
 # See https://docs.battlesnake.com/api/example-move for available data
 def move(game_state: typing.Dict) -> typing.Dict:
+    game_state = simplify_game_state(game_state)
+    state_tree = State(game_state, None, 0)
 
-    is_move_safe = {"up": True, "down": True, "left": True, "right": True}
+    # Are there any safe moves left?
+    possible_moves = get_possible_moves(game_state)
 
+    # create first layer
+    for move in possible_moves:
+        coords  = get_snake_move_coord(game_state, move)
+        move_reward = coord_to_reward(game_state, coords['x'], coords['y'])
+
+        state = State(move_snake(game_state, move), move, move_reward)
+        state_tree.next_states.append(state)
+
+    # create second layer
+    for next_state in state_tree.next_states:
+        next_possible_moves = get_possible_moves(next_state)        
+
+        for move in next_possible_moves:
+            coords  = get_snake_move_coord(next_state, move)
+            move_reward = coord_to_reward(next_state, coords['x'], coords['y'])
+
+            state = State(move_snake(next_state, move), move, move_reward)
+            next_state.next_states.append(state)
+
+
+    if len(possible_moves) == 0:
+        print(f"MOVE {game_state['turn']}: No safe moves detected! Moving down")
+        return {"move": "down"}
+
+    move_rewards = {}
+
+    for move in possible_moves:
+        coords  = get_snake_move_coord(game_state, move)
+        move_reward = coord_to_reward(game_state, coords['x'], coords['y'])
+        move_rewards[move] = move_reward
+
+    best_move = max(move_rewards, key=move_rewards.get)
+    move_rewards_string = ' | '.join(f'{move}: {move_rewards[move]:2f}' for move in move_rewards)
+    # print(f"{move_rewards_string} | MOVE {game_state['turn']}: {best_move}")
+    print(move_snake(simplify_game_state(game_state), best_move))
+    if game_state['turn'] == 5:
+        exit(0)
+    return {"move": best_move}
+
+
+def get_possible_moves(game_state):
+    safe_moves = set(['up', 'left', 'down', 'right'])
     # We've included code to prevent your Battlesnake from moving backwards
     my_head = game_state["you"]["body"][0]  # Coordinates of your head
     my_neck = game_state["you"]["body"][1]  # Coordinates of your "neck"
 
-    if my_neck["x"] < my_head["x"]:  # Neck is left of head, don't move left
-        is_move_safe["left"] = False
+    # Check if snake goes out of bounds
+    if my_head["x"] <= 0 :  # Neck is left of head, don't move left
+        safe_moves.discard('left')
 
-    elif my_neck["x"] > my_head["x"]:  # Neck is right of head, don't move right
-        is_move_safe["right"] = False
+    if my_head["x"] >= game_state["board"]["width"]-1:  # Neck is right of head, don't move right
+        safe_moves.discard('right')
 
-    elif my_neck["y"] < my_head["y"]:  # Neck is below head, don't move down
-        is_move_safe["down"] = False
+    if my_head["y"] <= 0:  # Neck is below head, don't move down
+        safe_moves.discard('down')
 
-    elif my_neck["y"] > my_head["y"]:  # Neck is above head, don't move up
-        is_move_safe["up"] = False
+    if my_head["y"] >= game_state["board"]["height"]-1:  # Neck is above head, don't move up
+        safe_moves.discard('up')
 
-    # TODO: Step 1 - Prevent your Battlesnake from moving out of bounds
-    # board_width = game_state['board']['width']
-    # board_height = game_state['board']['height']
+    safe_moves_temp = safe_moves.copy()
 
-    # TODO: Step 2 - Prevent your Battlesnake from colliding with itself
-    # my_body = game_state['you']['body']
+    # Check if snake hits its body
+    for safe_move in safe_moves_temp:
+        safe_move_coord = get_snake_move_coord(game_state, safe_move)
+        for body_coords in game_state["you"]["body"][1:]:
+            if safe_move_coord == body_coords:
+                safe_moves.discard(safe_move)
 
-    # TODO: Step 3 - Prevent your Battlesnake from colliding with other Battlesnakes
-    # opponents = game_state['board']['snakes']
+    return safe_moves
 
-    # Are there any safe moves left?
-    safe_moves = []
-    for move, isSafe in is_move_safe.items():
-        if isSafe:
-            safe_moves.append(move)
+def get_snake_move_coord(game_state, direction):
+    snake_head_pos = game_state["you"]["head"]
+    x = snake_head_pos['x']
+    y = snake_head_pos['y']
+    if direction == 'left':
+        return {"x": x-1, "y": y}
+    elif direction == 'down':
+        return {"x": x, "y": y-1}
+    elif direction == 'right':
+        return {"x": x+1, "y": y}
+    elif direction == 'up':
+        return {"x": x, "y": y+1}
+    else:
+        raise Exception('Invalid direction')
 
-    if len(safe_moves) == 0:
-        print(f"MOVE {game_state['turn']}: No safe moves detected! Moving down")
-        return {"move": "down"}
+def get_manhattan_distance(x1: int, y1: int, x2: int, y2: int) -> int:
+    return abs(x2 - x1) + abs(y2 - y1)
 
-    # Choose a random move from the safe ones
-    next_move = random.choice(safe_moves)
+def get_pythagorean_distance(x1: int, y1: int, x2: int, y2: int) -> int:
+    return math.sqrt( (x2 - x1) ** 2 + (y2 - y1) ** 2 )
+    
+def coord_to_reward(game_state, x, y):
+    reward = 0
+    
+    for food_coord in game_state["board"]["food"]:
+        food_x = food_coord["x"]
+        food_y = food_coord["y"]
+        dist = get_manhattan_distance(x, y, food_x, food_y)
 
-    # TODO: Step 4 - Move towards food instead of random, to regain health and survive longer
-    # food = game_state['board']['food']
+        if dist == 0:
+            reward += 1
+        else:
+            reward += 1/dist
 
-    print(f"MOVE {game_state['turn']}: {next_move}")
-    return {"move": next_move}
 
+    return reward
+
+def simplify_snake(snake):
+    simplified_snake = {
+        "health": snake["health"],
+        "body": snake["body"],
+        "head": snake["head"],
+        "length": snake["length"],
+    }
+    return simplified_snake
+
+def simplify_game_state(game_state):
+    simplified_game_state = {
+        "turn": game_state["turn"],
+        "board": {
+            "height": game_state["board"]["height"],
+            "width": game_state["board"]["width"],
+            "food": game_state["board"]["food"],
+            "snakes": [simplify_snake(snake) for snake in game_state["board"]["snakes"][1:]], 
+        },
+        "you": simplify_snake(game_state["you"]),
+    }
+
+    return simplified_game_state
+
+def move_snake(game_state, direction):
+
+    new_head_coord  = get_snake_move_coord(game_state, direction)
+
+    game_state["you"]["body"].insert(0, new_head_coord)
+        
+    # If there's a food at the location that the snake is moving to, remove it and extend the snake's length
+    if new_head_coord not in game_state["board"]["food"]:
+        game_state["you"]["body"].pop()
+    else:
+        game_state['board']['food'].remove(new_head_coord)
+
+    return game_state
+
+def generate_next_game_states(current_game_state, possible_moves):
+    next_game_states = {}
+    for move in possible_moves:
+        next_game_states[move] = next_game_state(current_game_state, move)
+
+def next_game_state(simplified_game_state, move):
+    move_coord = get_snake_move_coord(simplified_game_state, move)
+    return [(move_snake(simplified_game_state, move), coord_to_reward(move_coord['x'], move_coord['y']))]
+
+class State:
+    def __init__(self, state, direction, reward) -> None:
+        self.state = state
+        self.reward = reward
+        self.direction = direction
+        self.next_states = []
 
 # Start server when `python main.py` is run
 if __name__ == "__main__":

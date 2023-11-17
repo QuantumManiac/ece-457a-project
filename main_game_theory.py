@@ -39,53 +39,57 @@ def end(game_state: typing.Dict):
     print("GAME OVER\n")
 
 
+def generate_state_tree(root_state, layers):
+    if layers == 0:
+        return root_state
+
+    possible_moves = get_possible_moves(root_state)
+
+    for move in possible_moves:
+        coords  = get_snake_move_coord(root_state, move)
+        move_reward = coord_to_reward(root_state, coords)
+
+        state = State(move_snake(root_state, move), move, move_reward)
+        root_state.next_states.append(state)
+
+    for next_state in root_state.next_states:
+        generate_state_tree(next_state, layers-1)
+
+    return root_state
+
+def get_max_reward(state):
+    if len(state.next_states) == 0:
+        return state.reward
+
+    return state.reward + max(get_max_reward(next_state) for next_state in state.next_states)
+        
+def get_best_move(state_tree):
+    if len(state_tree.next_states) == 0:
+        None
+
+    best_move = max(state_tree.next_states, key=get_max_reward).direction
+
+    return best_move
+    
+
 # move is called on every turn and returns your next move
 # Valid moves are "up", "down", "left", or "right"
 # See https://docs.battlesnake.com/api/example-move for available data
 def move(game_state: typing.Dict) -> typing.Dict:
     game_state = simplify_game_state(game_state)
     state_tree = State(game_state, None, 0)
+    generate_state_tree(state_tree, 2)
 
     # Are there any safe moves left?
-    possible_moves = get_possible_moves(game_state)
+    best_move = get_best_move(state_tree)
 
-    # create first layer
-    for move in possible_moves:
-        coords  = get_snake_move_coord(game_state, move)
-        move_reward = coord_to_reward(game_state, coords['x'], coords['y'])
-
-        state = State(move_snake(game_state, move), move, move_reward)
-        state_tree.next_states.append(state)
-
-    # create second layer
-    for next_state in state_tree.next_states:
-        next_possible_moves = get_possible_moves(next_state)        
-
-        for move in next_possible_moves:
-            coords  = get_snake_move_coord(next_state, move)
-            move_reward = coord_to_reward(next_state, coords['x'], coords['y'])
-
-            state = State(move_snake(next_state, move), move, move_reward)
-            next_state.next_states.append(state)
-
-
-    if len(possible_moves) == 0:
+    if best_move is None:
         print(f"MOVE {game_state['turn']}: No safe moves detected! Moving down")
         return {"move": "down"}
 
-    move_rewards = {}
-
-    for move in possible_moves:
-        coords  = get_snake_move_coord(game_state, move)
-        move_reward = coord_to_reward(game_state, coords['x'], coords['y'])
-        move_rewards[move] = move_reward
-
-    best_move = max(move_rewards, key=move_rewards.get)
-    move_rewards_string = ' | '.join(f'{move}: {move_rewards[move]:2f}' for move in move_rewards)
+    # move_rewards_string = ' | '.join(f'{move}: {move_rewards[move]:2f}' for move in move_rewards)
     # print(f"{move_rewards_string} | MOVE {game_state['turn']}: {best_move}")
     print(move_snake(simplify_game_state(game_state), best_move))
-    if game_state['turn'] == 5:
-        exit(0)
     return {"move": best_move}
 
 
@@ -140,12 +144,14 @@ def get_manhattan_distance(x1: int, y1: int, x2: int, y2: int) -> int:
 def get_pythagorean_distance(x1: int, y1: int, x2: int, y2: int) -> int:
     return math.sqrt( (x2 - x1) ** 2 + (y2 - y1) ** 2 )
     
-def coord_to_reward(game_state, x, y):
+def coord_to_reward(game_state, coords):
     reward = 0
     
     for food_coord in game_state["board"]["food"]:
         food_x = food_coord["x"]
         food_y = food_coord["y"]
+        x = coords["x"]
+        y = coords["y"]
         dist = get_manhattan_distance(x, y, food_x, food_y)
 
         if dist == 0:

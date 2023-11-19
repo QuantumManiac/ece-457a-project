@@ -12,7 +12,20 @@
 
 import typing
 import math
+import enum
 
+NUM_LAYERS = 2
+LAYER_REWARD_DECAY = 0.5
+
+class Player(enum.Enum):
+    YOU = 'you'
+    OPPONENT = 'opponent'
+
+class Direction(enum.Enum):
+    UP = "up"
+    DOWN = "down"
+    LEFT = "left"
+    RIGHT = "right"
 
 # info is called when you create your Battlesnake on play.battlesnake.com
 # and controls your Battlesnake's appearance
@@ -43,13 +56,19 @@ def generate_state_tree(root_state, layers):
     if layers == 0:
         return root_state
 
-    possible_moves = get_possible_moves(root_state)
+    player_turn = root_state.player_turn
+    if "opponent" in root_state.state:
+        next_player_turn = Player.OPPONENT if player_turn == Player.YOU else Player.YOU
+    else:
+        next_player_turn = player_turn
 
-    for move in possible_moves:
-        coords  = get_snake_move_coord(root_state, move)
-        move_reward = coord_to_reward(root_state, coords)
+    next_possible_moves = get_possible_moves(root_state.state, next_player_turn)
 
-        state = State(move_snake(root_state, move), move, move_reward)
+    for next_move in next_possible_moves:
+        coords = get_snake_move_coord(root_state.state, next_move, next_player_turn)
+        move_reward = coord_to_reward(root_state.state, coords, next_player_turn)
+        next_state = move_snake(root_state.state, next_move, next_player_turn)
+        state = State(next_state, next_move, move_reward, next_player_turn)
         root_state.next_states.append(state)
 
     for next_state in root_state.next_states:
@@ -60,12 +79,12 @@ def generate_state_tree(root_state, layers):
 def get_max_reward(state):
     if len(state.next_states) == 0:
         return state.reward
-
-    return state.reward + max(get_max_reward(next_state) for next_state in state.next_states)
+    # We have a LAYER_REWARD_DECAY multiplier here to put higher value to sooner rewards than later ones
+    return state.reward + LAYER_REWARD_DECAY * max(get_max_reward(next_state) for next_state in state.next_states)
         
 def get_best_move(state_tree):
     if len(state_tree.next_states) == 0:
-        None
+        return None
 
     best_move = max(state_tree.next_states, key=get_max_reward).direction
 
@@ -77,63 +96,47 @@ def get_best_move(state_tree):
 # See https://docs.battlesnake.com/api/example-move for available data
 def move(game_state: typing.Dict) -> typing.Dict:
     game_state = simplify_game_state(game_state)
-    state_tree = State(game_state, None, 0)
-    generate_state_tree(state_tree, 2)
+    state_tree = State(game_state, None, 0, Player.YOU)
+    generate_state_tree(state_tree, NUM_LAYERS)
 
     # Are there any safe moves left?
     best_move = get_best_move(state_tree)
 
     if best_move is None:
         print(f"MOVE {game_state['turn']}: No safe moves detected! Moving down")
-        return {"move": "down"}
+        return {"move": Direction.DOWN.value}
 
     # move_rewards_string = ' | '.join(f'{move}: {move_rewards[move]:2f}' for move in move_rewards)
     # print(f"{move_rewards_string} | MOVE {game_state['turn']}: {best_move}")
-    print(move_snake(simplify_game_state(game_state), best_move))
+    # print(move_snake(simplify_game_state(game_state), best_move))
     return {"move": best_move}
 
 
-def get_possible_moves(game_state):
-    safe_moves = set(['up', 'left', 'down', 'right'])
-    # We've included code to prevent your Battlesnake from moving backwards
-    my_head = game_state["you"]["body"][0]  # Coordinates of your head
-    my_neck = game_state["you"]["body"][1]  # Coordinates of your "neck"
+def get_possible_moves(game_state, player: Player):
+    possible_moves = [direction.value for direction in Direction]
+    safe_moves = possible_moves.copy()
 
-    # Check if snake goes out of bounds
-    if my_head["x"] <= 0 :  # Neck is left of head, don't move left
-        safe_moves.discard('left')
-
-    if my_head["x"] >= game_state["board"]["width"]-1:  # Neck is right of head, don't move right
-        safe_moves.discard('right')
-
-    if my_head["y"] <= 0:  # Neck is below head, don't move down
-        safe_moves.discard('down')
-
-    if my_head["y"] >= game_state["board"]["height"]-1:  # Neck is above head, don't move up
-        safe_moves.discard('up')
-
-    safe_moves_temp = safe_moves.copy()
-
-    # Check if snake hits its body
-    for safe_move in safe_moves_temp:
-        safe_move_coord = get_snake_move_coord(game_state, safe_move)
-        for body_coords in game_state["you"]["body"][1:]:
-            if safe_move_coord == body_coords:
-                safe_moves.discard(safe_move)
+    # Discard move if it makes snake hit its body
+    for move in possible_moves:
+        move_coord = get_snake_move_coord(game_state, move, player)
+        for body_coords in game_state[player.value]["body"][1:]:
+            if move_coord == body_coords:
+                safe_moves.discard(move)
 
     return safe_moves
 
-def get_snake_move_coord(game_state, direction):
-    snake_head_pos = game_state["you"]["head"]
+def get_snake_move_coord(game_state, direction, player: Player):
+    snake_head_pos = game_state[player.value]["head"]
+
     x = snake_head_pos['x']
     y = snake_head_pos['y']
-    if direction == 'left':
+    if direction == Direction.LEFT:
         return {"x": x-1, "y": y}
-    elif direction == 'down':
+    elif direction == Direction.DOWN:
         return {"x": x, "y": y-1}
-    elif direction == 'right':
+    elif direction == Direction.RIGHT:
         return {"x": x+1, "y": y}
-    elif direction == 'up':
+    elif direction == Direction.UP:
         return {"x": x, "y": y+1}
     else:
         raise Exception('Invalid direction')
@@ -144,7 +147,7 @@ def get_manhattan_distance(x1: int, y1: int, x2: int, y2: int) -> int:
 def get_pythagorean_distance(x1: int, y1: int, x2: int, y2: int) -> int:
     return math.sqrt( (x2 - x1) ** 2 + (y2 - y1) ** 2 )
     
-def coord_to_reward(game_state, coords):
+def coord_to_reward(game_state, coords, player_turn: Player):
     reward = 0
     
     for food_coord in game_state["board"]["food"]:
@@ -178,41 +181,35 @@ def simplify_game_state(game_state):
             "height": game_state["board"]["height"],
             "width": game_state["board"]["width"],
             "food": game_state["board"]["food"],
-            "snakes": [simplify_snake(snake) for snake in game_state["board"]["snakes"][1:]], 
         },
         "you": simplify_snake(game_state["you"]),
     }
 
+    if len(game_state["board"]["snakes"]) > 1:
+        game_state["opponent"] = simplify_snake(game_state["board"]["snakes"][1]),
+
     return simplified_game_state
 
-def move_snake(game_state, direction):
+def move_snake(game_state, direction, player: Player):
 
-    new_head_coord  = get_snake_move_coord(game_state, direction)
+    new_head_coord = get_snake_move_coord(game_state, direction, player)
 
-    game_state["you"]["body"].insert(0, new_head_coord)
+    game_state[player.value].insert(0, new_head_coord)
         
     # If there's a food at the location that the snake is moving to, remove it and extend the snake's length
     if new_head_coord not in game_state["board"]["food"]:
-        game_state["you"]["body"].pop()
+        game_state[player.value]["body"].pop()
     else:
         game_state['board']['food'].remove(new_head_coord)
 
     return game_state
 
-def generate_next_game_states(current_game_state, possible_moves):
-    next_game_states = {}
-    for move in possible_moves:
-        next_game_states[move] = next_game_state(current_game_state, move)
-
-def next_game_state(simplified_game_state, move):
-    move_coord = get_snake_move_coord(simplified_game_state, move)
-    return [(move_snake(simplified_game_state, move), coord_to_reward(move_coord['x'], move_coord['y']))]
-
 class State:
-    def __init__(self, state, direction, reward) -> None:
+    def __init__(self, state, move_made, reward, player_turn: Player) -> None:
         self.state = state
+        self.player_turn = player_turn
         self.reward = reward
-        self.direction = direction
+        self.move_made = move_made
         self.next_states = []
 
 # Start server when `python main.py` is run

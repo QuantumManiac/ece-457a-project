@@ -44,47 +44,81 @@ def end(game_state: typing.Dict):
 # Valid moves are "up", "down", "left", or "right"
 # See https://docs.battlesnake.com/api/example-move for available data
 def move(game_state: typing.Dict) -> typing.Dict:
+    
+    iter, mutation_prob = 10, 0.3
+    max_while = 25
+    best_move_set, best_cost = None, -1
+    safe_moves = [generate_moves(game_state,1),
+                  generate_moves(game_state,1),
+                  generate_moves(game_state,1),
+                  generate_moves(game_state,1),
+                  generate_moves(game_state,1),
+                  generate_moves(game_state,1),
+                  generate_moves(game_state,1),
+                  generate_moves(game_state,1)]
 
-    max = -1
-    next_move = "down"
-    num_steps = len(game_state["you"]["body"])
-    runner = 0
-    while max == -1 and runner < 5:
-        if num_steps == 2:
-            runner += 1
+    while best_move_set is None and max_while > 0:
+        for i in range(iter):
+            max = -1
+            next_move = "down"
+            num_steps = len(game_state["you"]["body"])
 
-        moves = [generate_moves(game_state,num_steps),
-                 generate_moves(game_state,num_steps),
-                 generate_moves(game_state,num_steps),
-                 generate_moves(game_state,num_steps),
-                 generate_moves(game_state,num_steps),
-                 generate_moves(game_state,num_steps)]
-    
-        move_set = None
-        for move in moves:
-            if len(move) == 0:
-                continue
-            move_val = assess_cost(game_state, move)
-            #print(move, move_val)
-            if move_val > max:
-                max = move_val
-                next_move = move[0]
-                move_set = None
-            if move_val == max:
-                if move_set is None:
-                    move_set = [next_move, move[0]]   
-                else:
-                    move_set.append(move[0])
-    
-        if move_set is not None:
-            next_move = random.choice(move_set)
-        num_steps = num_steps - 1 if num_steps > 2 else num_steps
-    
+            if best_move_set is None:
+                moves = [generate_moves(game_state,num_steps),
+                         generate_moves(game_state,num_steps),
+                         generate_moves(game_state,num_steps),
+                         generate_moves(game_state,num_steps),  
+                         generate_moves(game_state,num_steps),
+                         generate_moves(game_state,num_steps)]
+            else:
+                moves = [best_move_set,
+                         generate_moves(game_state,num_steps),
+                         generate_moves(game_state,num_steps),
+                         mutate(best_move_set, mutation_prob),
+                         mutate(best_move_set, mutation_prob),
+                         mutate(best_move_set, mutation_prob)]
+        
+            for move in moves:
+                if len(move) == 0:
+                    continue
+                move_val = assess_cost(game_state, move)
+                if move_val > max:
+                    #print(move_val)
+                    max = move_val
+                    best_move_set = copy.copy(move)
+                    best_cost = move_val
+
+        max_while -= 1
+
+    if best_move_set is not None:
+        next_move = best_move_set[0]
+    else:
+        next_move = random.choice(safe_moves)
+        next_move = next_move[0]  
+
     print(f"MOVE {game_state['turn']}: {next_move}")
     return {"move": next_move}
 
-def genetic_decider(game_state: typing.Dict, hyper_params: typing.Dict) -> typing.Dict:
-    return {"move": "left"}
+def mutate(best_moves: typing.List, mutation_prob: float) -> typing.List:
+    if len(best_moves) <= 2:
+        return best_moves
+    random_moveset = ["up", "down", "left", "right"]
+    mutation_point = random.choice([*range(len(best_moves) - 1)])
+    mutation_point = 1 if mutation_point == 0 else (len(best_moves) - 2 if mutation_point == len(best_moves) - 1 else 1)
+
+    if best_moves[mutation_point + 1] == "left" or best_moves[mutation_point - 1] == "left":
+        random_moveset.remove("right")
+    elif best_moves[mutation_point + 1] == "right" or best_moves[mutation_point - 1] == "right":
+        random_moveset.remove("left")
+    elif best_moves[mutation_point + 1] == "up" or best_moves[mutation_point - 1] == "up":
+        random_moveset.remove("down")
+    elif best_moves[mutation_point + 1] == "down" or best_moves[mutation_point - 1] == "down":
+        random_moveset.remove("up")
+    
+    if random.uniform(0,1) > mutation_point:
+        best_moves[mutation_point] = random.choice(random_moveset)
+    
+    return best_moves
 
 def generate_moves(game_state: typing.Dict, k: int) -> typing.List:
     moves = ["up","down","right","left"]
@@ -120,7 +154,7 @@ def generate_moves(game_state: typing.Dict, k: int) -> typing.List:
                 safe_moves.remove("up")
             
             if len(safe_moves) == 0:
-                return []
+                return moves_out
             moves_out.append(random.choice(safe_moves))
         
         if moves_out[-1] == "up":
@@ -141,8 +175,6 @@ def generate_moves(game_state: typing.Dict, k: int) -> typing.List:
             body.pop()
         
     return moves_out
-
-
 
 def is_in_body(body: typing.Dict, cell: typing.List) -> bool:
     for body_segment in range(len(body) - 1):

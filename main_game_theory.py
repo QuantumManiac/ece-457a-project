@@ -10,7 +10,7 @@
 # To get you started we've included code to prevent your Battlesnake from moving backwards.
 # For more info see docs.battlesnake.com
 
-import typing
+from typing import Dict, List, Optional, Any
 import math
 import enum
 
@@ -27,10 +27,18 @@ class Direction(enum.Enum):
     LEFT = "left"
     RIGHT = "right"
 
+class State:
+    def __init__(self, state: Dict[str, Any], move_made: Optional[Direction], reward: float, player_turn: Player) -> None:
+        self.state = state
+        self.player_turn = player_turn
+        self.reward = reward
+        self.move_made = move_made
+        self.next_states: List[State] = []
+
 # info is called when you create your Battlesnake on play.battlesnake.com
 # and controls your Battlesnake's appearance
 # TIP: If you open your Battlesnake URL in a browser you should see this data
-def info() -> typing.Dict:
+def info() -> Dict[str, Any]:
     print("INFO")
 
     return {
@@ -43,16 +51,16 @@ def info() -> typing.Dict:
 
 
 # start is called when your Battlesnake begins a game
-def start(game_state: typing.Dict):
+def start(game_state: Dict[str, Any]):
     print("GAME START")
 
 
 # end is called when your Battlesnake finishes a game
-def end(game_state: typing.Dict):
+def end(game_state: Dict[str, Any]):
     print("GAME OVER\n")
 
 
-def generate_state_tree(root_state, layers):
+def generate_state_tree(root_state: State, layers: int):
     if layers == 0:
         return root_state
 
@@ -62,13 +70,13 @@ def generate_state_tree(root_state, layers):
     else:
         next_player_turn = player_turn
 
-    next_possible_moves = get_possible_moves(root_state.state, next_player_turn)
+    next_possible_moves = get_possible_moves(root_state, next_player_turn)
 
     for next_move in next_possible_moves:
-        coords = get_snake_move_coord(root_state.state, next_move, next_player_turn)
-        move_reward = coord_to_reward(root_state.state, coords, next_player_turn)
-        next_state = move_snake(root_state.state, next_move, next_player_turn)
-        state = State(next_state, next_move, move_reward, next_player_turn)
+        coords = get_snake_move_coord(root_state, next_move, next_player_turn)
+        move_reward = coord_to_reward(root_state, coords, next_player_turn)
+        next_state = move_snake(root_state, next_move, next_player_turn)
+        state = State(next_state.state, next_move, move_reward, next_player_turn)
         root_state.next_states.append(state)
 
     for next_state in root_state.next_states:
@@ -76,57 +84,73 @@ def generate_state_tree(root_state, layers):
 
     return root_state
 
-def get_max_reward(state):
+def get_max_reward(state: State) -> float:
     if len(state.next_states) == 0:
         return state.reward
     # We have a LAYER_REWARD_DECAY multiplier here to put higher value to sooner rewards than later ones
     return state.reward + LAYER_REWARD_DECAY * max(get_max_reward(next_state) for next_state in state.next_states)
         
-def get_best_move(state_tree):
-    if len(state_tree.next_states) == 0:
-        return None
+def get_next_moves(state_tree: State) -> Dict[Direction, float]:
+    if not state_tree.next_states:
+        return {}
 
-    best_move = max(state_tree.next_states, key=get_max_reward).direction
+    next_moves: Dict[Direction, float] = {
+        next_state.move_made: get_max_reward(next_state)
+        for next_state in state_tree.next_states
+        if next_state.move_made is not None
+    }
 
-    return best_move
+    return next_moves
     
 
 # move is called on every turn and returns your next move
 # Valid moves are "up", "down", "left", or "right"
 # See https://docs.battlesnake.com/api/example-move for available data
-def move(game_state: typing.Dict) -> typing.Dict:
+def move(game_state: Dict[str, Any]) -> Dict[str, Any]:
     game_state = simplify_game_state(game_state)
     state_tree = State(game_state, None, 0, Player.YOU)
     generate_state_tree(state_tree, NUM_LAYERS)
 
-    # Are there any safe moves left?
-    best_move = get_best_move(state_tree)
+    next_moves = get_next_moves(state_tree)
 
-    if best_move is None:
+    if len(next_moves) == 0:
         print(f"MOVE {game_state['turn']}: No safe moves detected! Moving down")
         return {"move": Direction.DOWN.value}
 
+    best_move = max(next_moves, key=lambda k: next_moves.get(k, 0))
     # move_rewards_string = ' | '.join(f'{move}: {move_rewards[move]:2f}' for move in move_rewards)
     # print(f"{move_rewards_string} | MOVE {game_state['turn']}: {best_move}")
     # print(move_snake(simplify_game_state(game_state), best_move))
-    return {"move": best_move}
+    print(f"MOVE {game_state['turn']}: {best_move.value} |{'|'.join(f' {move.value}: {next_moves[move]:2f} ' for move in next_moves)}")   
+    return {"move": best_move.value}
 
 
-def get_possible_moves(game_state, player: Player):
-    possible_moves = [direction.value for direction in Direction]
+def get_possible_moves(game_state: State, player: Player):
+    possible_moves = {direction for direction in Direction}
     safe_moves = possible_moves.copy()
 
-    # Discard move if it makes snake hit its body
     for move in possible_moves:
         move_coord = get_snake_move_coord(game_state, move, player)
-        for body_coords in game_state[player.value]["body"][1:]:
+        
+        # Discard move if it makes snake hit a wall
+        if not 0 <= move_coord["x"] < game_state.state["board"]["width"] or not 0 <= move_coord["y"] < game_state.state["board"]["height"]:
+            safe_moves.discard(move)
+            continue
+
+        # Discard move if it makes snake hit its body
+        not_safe = False
+        for body_coords in game_state.state[player.value]["body"][1:]:
             if move_coord == body_coords:
                 safe_moves.discard(move)
+                not_safe = True
+                break
+        if not_safe:
+            continue
 
     return safe_moves
 
-def get_snake_move_coord(game_state, direction, player: Player):
-    snake_head_pos = game_state[player.value]["head"]
+def get_snake_move_coord(game_state: State, direction: Direction, player: Player):
+    snake_head_pos = game_state.state[player.value]["head"]
 
     x = snake_head_pos['x']
     y = snake_head_pos['y']
@@ -139,18 +163,18 @@ def get_snake_move_coord(game_state, direction, player: Player):
     elif direction == Direction.UP:
         return {"x": x, "y": y+1}
     else:
-        raise Exception('Invalid direction')
+        raise Exception(f'Invalid direction: {direction}')
 
 def get_manhattan_distance(x1: int, y1: int, x2: int, y2: int) -> int:
     return abs(x2 - x1) + abs(y2 - y1)
 
-def get_pythagorean_distance(x1: int, y1: int, x2: int, y2: int) -> int:
+def get_pythagorean_distance(x1: int, y1: int, x2: int, y2: int) -> float:
     return math.sqrt( (x2 - x1) ** 2 + (y2 - y1) ** 2 )
     
-def coord_to_reward(game_state, coords, player_turn: Player):
+def coord_to_reward(game_state: State, coords: Dict[str, int], player_turn: Player):
     reward = 0
     
-    for food_coord in game_state["board"]["food"]:
+    for food_coord in game_state.state["board"]["food"]:
         food_x = food_coord["x"]
         food_y = food_coord["y"]
         x = coords["x"]
@@ -165,7 +189,7 @@ def coord_to_reward(game_state, coords, player_turn: Player):
 
     return reward
 
-def simplify_snake(snake):
+def simplify_snake(snake: Dict[str, Any]) -> Dict[str, Any]:
     simplified_snake = {
         "health": snake["health"],
         "body": snake["body"],
@@ -174,7 +198,7 @@ def simplify_snake(snake):
     }
     return simplified_snake
 
-def simplify_game_state(game_state):
+def simplify_game_state(game_state: Dict[str, Any] ) -> Dict[str, Any]:
     simplified_game_state = {
         "turn": game_state["turn"],
         "board": {
@@ -190,27 +214,19 @@ def simplify_game_state(game_state):
 
     return simplified_game_state
 
-def move_snake(game_state, direction, player: Player):
+def move_snake(game_state: State, direction: Direction, player: Player):
 
     new_head_coord = get_snake_move_coord(game_state, direction, player)
 
-    game_state[player.value].insert(0, new_head_coord)
+    game_state.state[player.value]["body"].insert(0, new_head_coord)
         
     # If there's a food at the location that the snake is moving to, remove it and extend the snake's length
-    if new_head_coord not in game_state["board"]["food"]:
-        game_state[player.value]["body"].pop()
+    if new_head_coord not in game_state.state["board"]["food"]:
+        game_state.state[player.value]["body"].pop()
     else:
-        game_state['board']['food'].remove(new_head_coord)
+        game_state.state['board']['food'].remove(new_head_coord)
 
     return game_state
-
-class State:
-    def __init__(self, state, move_made, reward, player_turn: Player) -> None:
-        self.state = state
-        self.player_turn = player_turn
-        self.reward = reward
-        self.move_made = move_made
-        self.next_states = []
 
 # Start server when `python main.py` is run
 if __name__ == "__main__":

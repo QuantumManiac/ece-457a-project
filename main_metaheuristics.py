@@ -48,14 +48,22 @@ def move(game_state: typing.Dict) -> typing.Dict:
     max = -1
     next_move = "down"
     num_steps = len(game_state["you"]["body"])
-    while max == -1:
-        moves = [generate_moves(num_steps),
-                 generate_moves(num_steps),
-                 generate_moves(num_steps)]
+    runner = 0
+    while max == -1 and runner < 5:
+        if num_steps == 2:
+            runner += 1
+
+        moves = [generate_moves(game_state,num_steps),
+                 generate_moves(game_state,num_steps),
+                 generate_moves(game_state,num_steps),
+                 generate_moves(game_state,num_steps),
+                 generate_moves(game_state,num_steps),
+                 generate_moves(game_state,num_steps)]
     
-        # Choose a random move from the safe ones
         move_set = None
         for move in moves:
+            if len(move) == 0:
+                continue
             move_val = assess_cost(game_state, move)
             #print(move, move_val)
             if move_val > max:
@@ -70,34 +78,68 @@ def move(game_state: typing.Dict) -> typing.Dict:
     
         if move_set is not None:
             next_move = random.choice(move_set)
-
         num_steps = num_steps - 1 if num_steps > 2 else num_steps
-
-    # TODO: Step 4 - Move towards food instead of random, to regain health and survive longer
-    # food = game_state['board']['food']
+    
     print(f"MOVE {game_state['turn']}: {next_move}")
     return {"move": next_move}
 
 def genetic_decider(game_state: typing.Dict, hyper_params: typing.Dict) -> typing.Dict:
     return {"move": "left"}
 
-def generate_moves(k: int) -> typing.List:
+def generate_moves(game_state: typing.Dict, k: int) -> typing.List:
     moves = ["up","down","right","left"]
+    x_max = game_state["board"]["width"] - 1
+    y_max = game_state["board"]["height"] - 1
+    body = copy.copy(game_state["you"]["body"])
+    pos_x = copy.copy(body[0]["x"])
+    pos_y = copy.copy(body[0]["y"])
+    
     moves_out = []
     for k_i in range(k):
+        safe_moves = copy.copy(moves)
+        if pos_x == 0:
+            safe_moves.remove("left")
+        elif pos_x == x_max:
+            safe_moves.remove("right")
+
+        if pos_y == 0:
+            safe_moves.remove("down")
+        elif pos_y == y_max:
+            safe_moves.remove("up")
+
         if k_i == 0:
-            moves_out.append(random.choice(moves))
+            moves_out.append(random.choice(safe_moves))
         else:
-            flt = ""
-            if moves_out[-1] == "right":
-                flt = "left"
-            elif moves_out[-1] == "left":
-                flt = "right"
-            elif moves_out[-1] == "up":
-                flt = "down"
-            elif moves_out[-1] == "down":
-                flt = "up"
-            moves_out.append(random.choice([m for m in moves if m != flt]))
+            if "left" in safe_moves and (moves_out[-1] == "right" or is_in_body(body, [pos_x - 1, pos_y])):
+                safe_moves.remove("left")
+            if "right" in safe_moves and (moves_out[-1] == "left" or is_in_body(body, [pos_x + 1, pos_y])):
+                safe_moves.remove("right")
+            if "down" in safe_moves and (moves_out[-1] == "up" or is_in_body(body, [pos_x, pos_y - 1])):
+                safe_moves.remove("down")
+            if "up" in safe_moves and (moves_out[-1] == "down" or is_in_body(body, [pos_x, pos_y + 1])):
+                safe_moves.remove("up")
+            
+            if len(safe_moves) == 0:
+                return []
+            moves_out.append(random.choice(safe_moves))
+        
+        if moves_out[-1] == "up":
+            pos_y += 1
+        elif moves_out[-1] == "down":
+            pos_y -= 1
+        elif moves_out[-1] == "right":
+            pos_x += 1
+        elif moves_out[-1] == "left":
+            pos_x -= 1
+
+        grow = False
+        body.insert(0,{"x": pos_x, "y": pos_y})
+        for food_pos in game_state["board"]["food"]:
+            if food_pos["x"] == pos_x and food_pos["y"] == pos_y:
+                grow = True
+        if grow is False:
+            body.pop()
+        
     return moves_out
 
 
@@ -109,6 +151,8 @@ def is_in_body(body: typing.Dict, cell: typing.List) -> bool:
     return False
 
 def assess_cost(game_state: typing.Dict, proposed_moves: typing.List):
+    if len(proposed_moves) == 0:
+        return -1
     est_cost = 0
     grow = False
     x_max = game_state["board"]["width"] - 1

@@ -10,34 +10,41 @@
 # To get you started we've included code to prevent your Battlesnake from moving backwards.
 # For more info see docs.battlesnake.com
 
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Set, Optional, Any
 import math
 import enum
 
-NUM_LAYERS = 2
-LAYER_REWARD_DECAY = 0.5
+NUM_LAYERS = 2 
+"""Number of layers to generate in the state tree"""
+LAYER_REWARD_DECAY = 0.5 
+"""Decay multiplier for rewards in each layer. This is to put higher value to sooner rewards than later ones"""
 
 class Player(enum.Enum):
+    """The player that is making the move"""
     YOU = 'you'
     OPPONENT = 'opponent'
 
 class Direction(enum.Enum):
+    """The direction to move in"""
     UP = "up"
     DOWN = "down"
     LEFT = "left"
     RIGHT = "right"
 
 class State:
+    """A state in the state tree"""
     def __init__(self, state: Dict[str, Any], move_made: Optional[Direction], reward: float, player_turn: Player) -> None:
         self.state = state
+        """The state of the game"""
         self.player_turn = player_turn
+        """The player that is making the move"""
         self.reward = reward
+        """The reward the player gets for making the move"""
         self.move_made = move_made
+        """The move that was made to get to this state"""
         self.next_states: List[State] = []
+        """The next states that can be reached from this state"""
 
-# info is called when you create your Battlesnake on play.battlesnake.com
-# and controls your Battlesnake's appearance
-# TIP: If you open your Battlesnake URL in a browser you should see this data
 def info() -> Dict[str, Any]:
     print("INFO")
 
@@ -61,10 +68,21 @@ def end(game_state: Dict[str, Any]):
 
 
 def generate_state_tree(root_state: State, layers: int):
+    """Generates a tree of states for the given root state
+
+    Args:
+        root_state: The state to generate the tree from
+        layers: The number of layers to generate
+
+    Returns:
+        The generated state tree
+    """
+    # If we've reached the end of the tree, return the root state
     if layers == 0:
         return root_state
 
     player_turn = root_state.player_turn
+    # If an opponent exists, we need to alternate between players
     if "opponent" in root_state.state:
         next_player_turn = Player.OPPONENT if player_turn == Player.YOU else Player.YOU
     else:
@@ -85,12 +103,27 @@ def generate_state_tree(root_state: State, layers: int):
     return root_state
 
 def get_max_reward(state: State) -> float:
+    """Gets the maximum reward that can be achieved from the given state
+
+    Args:
+        state: The state to get the maximum reward from
+
+    Returns:
+        The maximum reward that can be achieved from the given state
+    """
     if len(state.next_states) == 0:
         return state.reward
-    # We have a LAYER_REWARD_DECAY multiplier here to put higher value to sooner rewards than later ones
     return state.reward + LAYER_REWARD_DECAY * max(get_max_reward(next_state) for next_state in state.next_states)
         
 def get_next_moves(state_tree: State) -> Dict[Direction, float]:
+    """Gets the next moves that can be made from the given state and their rewards
+
+    Args:
+        state_tree: The state to get the next moves from
+
+    Returns:
+        The next moves that can be made from the given state and their rewards
+    """
     if not state_tree.next_states:
         return {}
 
@@ -118,14 +151,19 @@ def move(game_state: Dict[str, Any]) -> Dict[str, Any]:
         return {"move": Direction.DOWN.value}
 
     best_move = max(next_moves, key=lambda k: next_moves.get(k, 0))
-    # move_rewards_string = ' | '.join(f'{move}: {move_rewards[move]:2f}' for move in move_rewards)
-    # print(f"{move_rewards_string} | MOVE {game_state['turn']}: {best_move}")
-    # print(move_snake(simplify_game_state(game_state), best_move))
     print(f"MOVE {game_state['turn']}: {best_move.value} |{'|'.join(f' {move.value}: {next_moves[move]:2f} ' for move in next_moves)}")   
     return {"move": best_move.value}
 
 
-def get_possible_moves(game_state: State, player: Player):
+def get_possible_moves(game_state: State, player: Player) -> Set[Direction]:
+    """Gets the possible moves that can be made from the given state. Impossible moves are ones that kill the snake.
+    Args:
+        game_state: The state to get the possible moves from
+        player: The player to get the possible moves for
+
+    Returns:
+        The possible moves that can be made from the given state
+    """
     possible_moves = {direction for direction in Direction}
     safe_moves = possible_moves.copy()
 
@@ -149,7 +187,20 @@ def get_possible_moves(game_state: State, player: Player):
 
     return safe_moves
 
-def get_snake_move_coord(game_state: State, direction: Direction, player: Player):
+def get_snake_move_coord(game_state: State, direction: Direction, player: Player) -> Dict[str, int]:
+    """Get the coordinate that the snake will move to if it moves in the given direction
+
+    Args:
+        game_state: The state of the game
+        direction: The direction to move in
+        player: The player that is making the move
+
+    Raises:
+        Exception: If the direction is invalid
+
+    Returns: A dictionary containing the x and y coordinates of the move
+        
+    """
     snake_head_pos = game_state.state[player.value]["head"]
 
     x = snake_head_pos['x']
@@ -166,14 +217,47 @@ def get_snake_move_coord(game_state: State, direction: Direction, player: Player
         raise Exception(f'Invalid direction: {direction}')
 
 def get_manhattan_distance(x1: int, y1: int, x2: int, y2: int) -> int:
+    """Gets the manhattan distance between two points
+
+    Args:
+        x1: the x coordinate of the first point
+        y1: the y coordinate of the first point
+        x2: the x coordinate of the second point
+        y2: the y coordinate of the second point
+
+    Returns:
+        The manhattan distance between the two points
+    """
     return abs(x2 - x1) + abs(y2 - y1)
 
 def get_pythagorean_distance(x1: int, y1: int, x2: int, y2: int) -> float:
+    """Gets the pythagorean distance between two points
+
+    Args:
+        x1: the x coordinate of the first point
+        y1: the y coordinate of the first point
+        x2: the x coordinate of the second point
+        y2: the y coordinate of the second point
+
+    Returns:
+        The pythagorean distance between the two points
+    """
     return math.sqrt( (x2 - x1) ** 2 + (y2 - y1) ** 2 )
     
-def coord_to_reward(game_state: State, coords: Dict[str, int], player_turn: Player):
+def coord_to_reward(game_state: State, coords: Dict[str, int], player_turn: Player) -> float:
+    """Gets the reward for a player if they move to the given coordinates
+
+    Args:
+        game_state: The state of the game
+        coords: The coordinates to get the reward for
+        player_turn: The player that is making the move
+
+    Returns:
+        _description_
+    """
     reward = 0
     
+    # Reward from moving closer to food
     for food_coord in game_state.state["board"]["food"]:
         food_x = food_coord["x"]
         food_y = food_coord["y"]
@@ -190,6 +274,14 @@ def coord_to_reward(game_state: State, coords: Dict[str, int], player_turn: Play
     return reward
 
 def simplify_snake(snake: Dict[str, Any]) -> Dict[str, Any]:
+    """Simplies the snake object to only contain the relevant information
+
+    Args:
+        snake: The snake to simplify
+
+    Returns:
+        The simplified snake
+    """
     simplified_snake = {
         "health": snake["health"],
         "body": snake["body"],
@@ -199,6 +291,14 @@ def simplify_snake(snake: Dict[str, Any]) -> Dict[str, Any]:
     return simplified_snake
 
 def simplify_game_state(game_state: Dict[str, Any] ) -> Dict[str, Any]:
+    """Takes the game state sent by the Battlesnake server and simplifies it to only contain the relevant information
+
+    Args:
+        game_state: The game state to simplify
+
+    Returns:
+        The simplified game state
+    """
     simplified_game_state = {
         "turn": game_state["turn"],
         "board": {
@@ -214,7 +314,17 @@ def simplify_game_state(game_state: Dict[str, Any] ) -> Dict[str, Any]:
 
     return simplified_game_state
 
-def move_snake(game_state: State, direction: Direction, player: Player):
+def move_snake(game_state: State, direction: Direction, player: Player) -> State:
+    """Generates a state that is the result of moving the snake in the given direction
+
+    Args:
+        game_state: The initial state of the game
+        direction: The direction to move in
+        player: The player that is making the move
+
+    Returns:
+        The state that is the result of moving the snake in the given direction
+    """
 
     new_head_coord = get_snake_move_coord(game_state, direction, player)
 

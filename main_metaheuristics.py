@@ -74,6 +74,7 @@ def move(game_state: typing.Dict) -> typing.Dict:
                 moves = [best_move_set,
                          generate_moves(game_state,num_steps),
                          generate_moves(game_state,num_steps),
+                         generate_moves(game_state,num_steps),
                          mutate(best_move_set, mutation_prob),
                          mutate(best_move_set, mutation_prob),
                          mutate(best_move_set, mutation_prob)]
@@ -83,7 +84,6 @@ def move(game_state: typing.Dict) -> typing.Dict:
                     continue
                 move_val = assess_cost(game_state, move)
                 if move_val > max:
-                    #print(move_val)
                     max = move_val
                     best_move_set = copy.copy(move)
                     best_cost = move_val

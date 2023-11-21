@@ -11,7 +11,6 @@
 # For more info see docs.battlesnake.com
 
 from typing import Dict, List, Set, Optional, Any, Tuple
-import math
 import enum
 from copy import deepcopy
 
@@ -19,6 +18,8 @@ NUM_LAYERS = 7
 """Number of layers to generate in the state tree"""
 LAYER_REWARD_DECAY = 0.5 
 """Decay multiplier for rewards in each layer. This is to put higher value to sooner rewards than later ones"""
+AGGRESSION_MULTIPLIER = 0.25
+"""Aggression multiplier to adjust how aggressive our snake is in regards to hunting down opponent"""
 
 turn_history = []
 
@@ -205,6 +206,23 @@ def get_possible_moves(game_state: State, player: Player) -> Set[Direction]:
                 safe_moves.discard(move)
                 not_safe = True
                 break
+
+            # how can we make sure we're hitting the head "head-on"?
+            # this also takes into consideration that the opponents best move would be to be just as aggressive as us
+            # we can use some sort of flood fill algorithm to get negative reward
+            curr_opp_value = Player.OPPONENT.value if player.value == Player.YOU.value else Player.YOU.value
+            avoid_head = 0 if len(game_state.state[curr_opp_value]["body"]) < len(game_state.state[player.value]["body"]) else 1
+            not_safe_inner = False
+            for opp_coords in game_state.state[curr_opp_value]["body"][avoid_head:]:
+                if move_coord == opp_coords:
+                    safe_moves.discard(move)
+                    not_safe = True
+                    not_safe_inner = True
+                    break
+
+            if not_safe_inner:
+                break
+
         if not_safe:
             continue
 
@@ -252,20 +270,6 @@ def get_manhattan_distance(x1: int, y1: int, x2: int, y2: int) -> int:
         The manhattan distance between the two points
     """
     return abs(x2 - x1) + abs(y2 - y1)
-
-def get_pythagorean_distance(x1: int, y1: int, x2: int, y2: int) -> float:
-    """Gets the pythagorean distance between two points
-
-    Args:
-        x1: the x coordinate of the first point
-        y1: the y coordinate of the first point
-        x2: the x coordinate of the second point
-        y2: the y coordinate of the second point
-
-    Returns:
-        The pythagorean distance between the two points
-    """
-    return math.sqrt( (x2 - x1) ** 2 + (y2 - y1) ** 2 )
     
 def coord_to_reward(game_state: State, coords: Dict[str, int], player_turn: Player) -> float:
     """Gets the reward for a player if they move to the given coordinates
@@ -293,7 +297,7 @@ def coord_to_reward(game_state: State, coords: Dict[str, int], player_turn: Play
         else:
             reward += 1/dist
 
-
+    reward += AGGRESSION_MULTIPLIER * aggression_reward(game_state, player_turn)
     return reward
 
 def simplify_snake(snake: Dict[str, Any]) -> Dict[str, Any]:
@@ -382,7 +386,7 @@ def visualize_game_state(game_state: State):
     print(game_state.next_states[0].state["you"]["body"][0])
     print(game_state.next_states[0].next_states[0].state["you"]["body"][0])
     
-def aggression_reward(game_state: State) -> float:
+def aggression_reward(game_state: State, player: Player) -> float:
     
     player_x = game_state.state[Player.YOU.value]["body"][0]["x"]
     player_y = game_state.state[Player.YOU.value]["body"][0]["y"]
@@ -391,7 +395,11 @@ def aggression_reward(game_state: State) -> float:
     opp_y = game_state.state[Player.OPPONENT.value]["body"][0]["y"]
 
     # will take tweaking to make sure it's not too aggressive
-    return get_manhattan_distance(player_x, player_y, opp_x, opp_y)
+    curr_opp_value = Player.OPPONENT if player == Player.YOU else Player.YOU
+    if len(game_state.state[curr_opp_value.value]["body"]) < len(game_state.state[player.value]["body"]):
+        return get_manhattan_distance(player_x, player_y, opp_x, opp_y)
+    else:
+        return 0
 
 # Start server when `python main.py` is run
 if __name__ == "__main__":

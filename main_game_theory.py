@@ -27,6 +27,7 @@ class Player(enum.Enum):
     """The player that is making the move"""
     YOU = 'you'
     OPPONENT = 'opponent'
+    NOW = 'now' # The current state of the board, for the root state of the decision tree
 
 class Direction(enum.Enum):
     """The direction to move in"""
@@ -74,8 +75,9 @@ def end(game_state: Dict[str, Any]):
         turn = input("Select turn to view: ")
         if turn == "q":
             break
+        depth = input("Select depth to view: ")
 
-        visualize_game_state(turn_history[int(turn)])
+        visualize_game_state(turn_history[int(turn)], int(depth))
 
 
 def generate_state_tree(root_state: State, layers: int):
@@ -95,7 +97,10 @@ def generate_state_tree(root_state: State, layers: int):
     player_turn = root_state.player_turn
     # If an opponent exists, we need to alternate between players
     if "opponent" in root_state.state:
-        next_player_turn = Player.OPPONENT if player_turn == Player.YOU else Player.YOU
+        if player_turn == Player.NOW:
+            next_player_turn = Player.YOU
+        else:
+            next_player_turn = Player.OPPONENT if player_turn == Player.YOU else Player.YOU
     else:
         next_player_turn = player_turn
 
@@ -163,7 +168,7 @@ def get_next_moves(state_tree: State) -> Dict[Direction, Tuple[int, float]]:
 # See https://docs.battlesnake.com/api/example-move for available data
 def move(game_state: Dict[str, Any]) -> Dict[str, Any]:
     game_state = simplify_game_state(game_state)
-    state_tree = State(game_state, None, 0, Player.YOU)
+    state_tree = State(game_state, None, 0, Player.NOW)
     generate_state_tree(state_tree, NUM_LAYERS)
     turn_history.append(state_tree)
 
@@ -210,18 +215,19 @@ def get_possible_moves(game_state: State, player: Player) -> Set[Direction]:
             # how can we make sure we're hitting the head "head-on"?
             # this also takes into consideration that the opponents best move would be to be just as aggressive as us
             # we can use some sort of flood fill algorithm to get negative reward
-            curr_opp_value = Player.OPPONENT.value if player.value == Player.YOU.value else Player.YOU.value
-            avoid_head = 0 if len(game_state.state[curr_opp_value]["body"]) < len(game_state.state[player.value]["body"]) else 1
-            not_safe_inner = False
-            for opp_coords in game_state.state[curr_opp_value]["body"][avoid_head:]:
-                if move_coord == opp_coords:
-                    safe_moves.discard(move)
-                    not_safe = True
-                    not_safe_inner = True
-                    break
+            if "opponent" in game_state.state:
+                curr_opp = Player.OPPONENT if player.value == Player.YOU else Player.YOU
+                pursue_head = 1 if len(game_state.state[curr_opp.value]["body"]) < len(game_state.state[player.value]["body"]) else 0
+                not_safe_inner = False
+                for opp_coords in game_state.state[curr_opp.value]["body"][pursue_head:]:
+                    if move_coord == opp_coords:
+                        safe_moves.discard(move)
+                        not_safe = True
+                        not_safe_inner = True
+                        break
 
-            if not_safe_inner:
-                break
+                if not_safe_inner:
+                    break
 
         if not_safe:
             continue
@@ -316,7 +322,7 @@ def simplify_snake(snake: Dict[str, Any]) -> Dict[str, Any]:
     }
     return simplified_snake
 
-def simplify_game_state(game_state: Dict[str, Any] ) -> Dict[str, Any]:
+def simplify_game_state(game_state: Dict[str, Any]) -> Dict[str, Any]:
     """Takes the game state sent by the Battlesnake server and simplifies it to only contain the relevant information
 
     Args:
@@ -336,7 +342,7 @@ def simplify_game_state(game_state: Dict[str, Any] ) -> Dict[str, Any]:
     }
 
     if len(game_state["board"]["snakes"]) > 1:
-        game_state["opponent"] = simplify_snake(game_state["board"]["snakes"][1]),
+        simplified_game_state["opponent"] = simplify_snake(game_state["board"]["snakes"][1])
 
     return simplified_game_state
 
@@ -362,42 +368,48 @@ def move_snake(game_state: Dict[str, Any], direction: Direction, player: Player)
         new_game_state['board']['food'].remove(new_head_coord)
     return new_game_state
 
-def visualize_game_state(game_state: State):
+def visualize_game_state(game_state: State, max_depth: int = NUM_LAYERS):
     from graphviz import Digraph
     from collections import deque
 
     dot = Digraph(comment='Game State')
     
-    q = deque([game_state])
+    q: deque[Tuple[State, int]] = deque([(game_state, 0)])
 
     while len(q) > 0:
-        state = q.popleft()
+        state, depth = q.popleft()
+        if depth >= max_depth:
+            break
+
         snake_positions = f"{state.state['you']['body'][0]}"
         if "opponent" in state.state:
-            snake_positions += f" {state.state['opponent']['body'][0]}"
+            snake_positions += f"\n{state.state['opponent']['body'][0]}"
 
         dot.node(str(id(state)), f"Snake heads: {snake_positions}\nReward: {state.reward:3f}\nMove: {state.move_made}\nPlayer: {state.player_turn.value}")
+        next_depth = depth + 1
+        if next_depth >= max_depth:
+            continue
         for next_state in state.next_states:
-            q.append(next_state)
+            q.append((next_state, next_depth))
             dot.edge(str(id(state)), str(id(next_state)))
 
     dot.render('game_state.gv', view=True)
-    print(game_state.state["you"]["body"][0])
-    print(game_state.next_states[0].state["you"]["body"][0])
-    print(game_state.next_states[0].next_states[0].state["you"]["body"][0])
     
 def aggression_reward(game_state: State, player: Player) -> float:
     
     player_x = game_state.state[Player.YOU.value]["body"][0]["x"]
     player_y = game_state.state[Player.YOU.value]["body"][0]["y"]
 
-    opp_x = game_state.state[Player.OPPONENT.value]["body"][0]["x"]
-    opp_y = game_state.state[Player.OPPONENT.value]["body"][0]["y"]
+    if "opponent" in game_state.state:
+        opp_x = game_state.state[Player.OPPONENT.value]["body"][0]["x"]
+        opp_y = game_state.state[Player.OPPONENT.value]["body"][0]["y"]
 
-    # will take tweaking to make sure it's not too aggressive
-    curr_opp_value = Player.OPPONENT if player == Player.YOU else Player.YOU
-    if len(game_state.state[curr_opp_value.value]["body"]) < len(game_state.state[player.value]["body"]):
-        return get_manhattan_distance(player_x, player_y, opp_x, opp_y)
+        # will take tweaking to make sure it's not too aggressive
+        curr_opp_value = Player.OPPONENT if player == Player.YOU else Player.YOU
+        if len(game_state.state[curr_opp_value.value]["body"]) < len(game_state.state[player.value]["body"]):
+            return get_manhattan_distance(player_x, player_y, opp_x, opp_y)
+        else:
+            return 0
     else:
         return 0
 

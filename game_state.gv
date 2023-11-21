@@ -1,0 +1,522 @@
+// Game State
+digraph {
+	140023763972496 [label="Snake heads: {'x': 4, 'y': 10}
+Reward: 0.000000
+Move: None
+Player: you"]
+	140023763972496 -> 140023763974096
+	140023763974096 [label="Snake heads: {'x': 5, 'y': 10}
+Reward: 0.958333
+Move: Direction.RIGHT
+Player: you"]
+	140023763974096 -> 140023763975568
+	140023763975568 [label="Snake heads: {'x': 6, 'y': 10}
+Reward: 1.642857
+Move: Direction.RIGHT
+Player: you"]
+	140023763975568 -> 140023764010000
+	140023763975568 -> 140023764011536
+	140023764010000 [label="Snake heads: {'x': 6, 'y': 9}
+Reward: 5.500000
+Move: Direction.DOWN
+Player: you"]
+	140023764010000 -> 140023764013136
+	140023764010000 -> 140023764014672
+	140023764011536 [label="Snake heads: {'x': 7, 'y': 10}
+Reward: 1.666667
+Move: Direction.RIGHT
+Player: you"]
+	140023764011536 -> 140023764204816
+	140023764011536 -> 140023764222800
+	140023764013136 [label="Snake heads: {'x': 6, 'y': 8}
+Reward: 0.450000
+Move: Direction.DOWN
+Player: you"]
+	140023764013136 -> 140023764016272
+	140023764013136 -> 140023764017808
+	140023764014672 [label="Snake heads: {'x': 7, 'y': 9}
+Reward: 0.700000
+Move: Direction.RIGHT
+Player: you"]
+	140023764014672 -> 140023764097744
+	140023764014672 -> 140023764099280
+	140023764014672 -> 140023764100816
+	140023764204816 [label="Snake heads: {'x': 7, 'y': 9}
+Reward: 1.700000
+Move: Direction.DOWN
+Player: you"]
+	140023764204816 -> 140023764224400
+	140023764204816 -> 140023764225936
+	140023764204816 -> 140023764227472
+	140023764222800 [label="Snake heads: {'x': 8, 'y': 10}
+Reward: 5.533333
+Move: Direction.RIGHT
+Player: you"]
+	140023764222800 -> 140023764333008
+	140023764222800 -> 140023764334544
+	140023764016272 [label="Snake heads: {'x': 6, 'y': 7}
+Reward: 0.450000
+Move: Direction.DOWN
+Player: you"]
+	140023764016272 -> 140023764019408
+	140023764016272 -> 140023764020944
+	140023764017808 [label="Snake heads: {'x': 7, 'y': 8}
+Reward: 0.583333
+Move: Direction.RIGHT
+Player: you"]
+	140023764017808 -> 140023764064528
+	140023764017808 -> 140023764066064
+	140023764017808 -> 140023764067600
+	140023764097744 [label="Snake heads: {'x': 7, 'y': 8}
+Reward: 0.583333
+Move: Direction.DOWN
+Player: you"]
+	140023764097744 -> 140023764102416
+	140023764097744 -> 140023764103952
+	140023764097744 -> 140023764105488
+	140023764099280 [label="Snake heads: {'x': 7, 'y': 10}
+Reward: 1.166667
+Move: Direction.UP
+Player: you"]
+	140023764099280 -> 140023764150608
+	140023764100816 [label="Snake heads: {'x': 8, 'y': 9}
+Reward: 1.250000
+Move: Direction.RIGHT
+Player: you"]
+	140023764100816 -> 140023764155216
+	140023764100816 -> 140023764189584
+	140023764100816 -> 140023764191120
+	140023764224400 [label="Snake heads: {'x': 6, 'y': 9}
+Reward: 5.500000
+Move: Direction.LEFT
+Player: you"]
+	140023764224400 -> 140023764229072
+	140023764225936 [label="Snake heads: {'x': 7, 'y': 8}
+Reward: 1.083333
+Move: Direction.DOWN
+Player: you"]
+	140023764225936 -> 140023764233680
+	140023764225936 -> 140023764235216
+	140023764225936 -> 140023764236752
+	140023764227472 [label="Snake heads: {'x': 8, 'y': 9}
+Reward: 1.750000
+Move: Direction.RIGHT
+Player: you"]
+	140023764227472 -> 140023764284880
+	140023764227472 -> 140023764286416
+	140023764227472 -> 140023764320784
+	140023764333008 [label="Snake heads: {'x': 8, 'y': 9}
+Reward: 0.750000
+Move: Direction.DOWN
+Player: you"]
+	140023764333008 -> 140023764336144
+	140023764333008 -> 140023764370512
+	140023764333008 -> 140023764372048
+	140023764334544 [label="Snake heads: {'x': 9, 'y': 10}
+Reward: 0.500000
+Move: Direction.RIGHT
+Player: you"]
+	140023764334544 -> 140023764418704
+	140023764334544 -> 140023764420240
+	140023764019408 [label="Snake heads: {'x': 6, 'y': 6}
+Reward: 0.366667
+Move: Direction.DOWN
+Player: you"]
+	140023764019408 -> 140023764022544
+	140023764019408 -> 140023764024080
+	140023764019408 -> 140023764058448
+	140023764020944 [label="Snake heads: {'x': 7, 'y': 7}
+Reward: 0.583333
+Move: Direction.RIGHT
+Player: you"]
+	140023764020944 -> 140023764059984
+	140023764020944 -> 140023764061520
+	140023764020944 -> 140023764063056
+	140023764064528 [label="Snake heads: {'x': 7, 'y': 7}
+Reward: 0.583333
+Move: Direction.DOWN
+Player: you"]
+	140023764064528 -> 140023764069200
+	140023764064528 -> 140023764070736
+	140023764064528 -> 140023764072272
+	140023764066064 [label="Snake heads: {'x': 7, 'y': 9}
+Reward: 0.700000
+Move: Direction.UP
+Player: you"]
+	140023764066064 -> 140023764073808
+	140023764066064 -> 140023764091792
+	140023764067600 [label="Snake heads: {'x': 8, 'y': 8}
+Reward: 0.833333
+Move: Direction.RIGHT
+Player: you"]
+	140023764067600 -> 140023764093328
+	140023764067600 -> 140023764094864
+	140023764067600 -> 140023764096336
+	140023764102416 [label="Snake heads: {'x': 6, 'y': 8}
+Reward: 0.450000
+Move: Direction.LEFT
+Player: you"]
+	140023764102416 -> 140023764107088
+	140023764103952 [label="Snake heads: {'x': 7, 'y': 7}
+Reward: 0.583333
+Move: Direction.DOWN
+Player: you"]
+	140023764103952 -> 140023764141456
+	140023764103952 -> 140023764142992
+	140023764103952 -> 140023764144528
+	140023764105488 [label="Snake heads: {'x': 8, 'y': 8}
+Reward: 0.833333
+Move: Direction.RIGHT
+Player: you"]
+	140023764105488 -> 140023764146064
+	140023764105488 -> 140023764147600
+	140023764105488 -> 140023764149136
+	140023764150608 [label="Snake heads: {'x': 8, 'y': 10}
+Reward: 5.200000
+Move: Direction.RIGHT
+Player: you"]
+	140023764150608 -> 140023764152208
+	140023764150608 -> 140023764153744
+	140023764155216 [label="Snake heads: {'x': 8, 'y': 8}
+Reward: 0.833333
+Move: Direction.DOWN
+Player: you"]
+	140023764155216 -> 140023764192720
+	140023764155216 -> 140023764194256
+	140023764155216 -> 140023764195792
+	140023764189584 [label="Snake heads: {'x': 8, 'y': 10}
+Reward: 5.200000
+Move: Direction.UP
+Player: you"]
+	140023764189584 -> 140023764197328
+	140023764189584 -> 140023764198864
+	140023764191120 [label="Snake heads: {'x': 9, 'y': 9}
+Reward: 0.833333
+Move: Direction.RIGHT
+Player: you"]
+	140023764191120 -> 140023764200400
+	140023764191120 -> 140023764201936
+	140023764191120 -> 140023764203472
+	140023764229072 [label="Snake heads: {'x': 6, 'y': 8}
+Reward: 0.450000
+Move: Direction.DOWN
+Player: you"]
+	140023764229072 -> 140023764230672
+	140023764229072 -> 140023764232208
+	140023764233680 [label="Snake heads: {'x': 6, 'y': 8}
+Reward: 1.450000
+Move: Direction.LEFT
+Player: you"]
+	140023764233680 -> 140023764271184
+	140023764233680 -> 140023764272720
+	140023764233680 -> 140023764274256
+	140023764235216 [label="Snake heads: {'x': 7, 'y': 7}
+Reward: 0.916667
+Move: Direction.DOWN
+Player: you"]
+	140023764235216 -> 140023764275792
+	140023764235216 -> 140023764277328
+	140023764235216 -> 140023764278864
+	140023764236752 [label="Snake heads: {'x': 8, 'y': 8}
+Reward: 1.166667
+Move: Direction.RIGHT
+Player: you"]
+	140023764236752 -> 140023764280400
+	140023764236752 -> 140023764281936
+	140023764236752 -> 140023764283472
+	140023764284880 [label="Snake heads: {'x': 8, 'y': 8}
+Reward: 1.166667
+Move: Direction.DOWN
+Player: you"]
+	140023764284880 -> 140023764322384
+	140023764284880 -> 140023764323920
+	140023764284880 -> 140023764325456
+	140023764286416 [label="Snake heads: {'x': 8, 'y': 10}
+Reward: 5.533333
+Move: Direction.UP
+Player: you"]
+	140023764286416 -> 140023764326992
+	140023764320784 [label="Snake heads: {'x': 9, 'y': 9}
+Reward: 1.166667
+Move: Direction.RIGHT
+Player: you"]
+	140023764320784 -> 140023764328528
+	140023764320784 -> 140023764330064
+	140023764320784 -> 140023764331600
+	140023764336144 [label="Snake heads: {'x': 7, 'y': 9}
+Reward: 1.200000
+Move: Direction.LEFT
+Player: you"]
+	140023764336144 -> 140023764373648
+	140023764336144 -> 140023764375184
+	140023764370512 [label="Snake heads: {'x': 8, 'y': 8}
+Reward: 0.666667
+Move: Direction.DOWN
+Player: you"]
+	140023764370512 -> 140023764376720
+	140023764370512 -> 140023764378256
+	140023764370512 -> 140023764379792
+	140023764372048 [label="Snake heads: {'x': 9, 'y': 9}
+Reward: 0.666667
+Move: Direction.RIGHT
+Player: you"]
+	140023764372048 -> 140023764381328
+	140023764372048 -> 140023764382864
+	140023764372048 -> 140023764384400
+	140023764418704 [label="Snake heads: {'x': 9, 'y': 9}
+Reward: 0.666667
+Move: Direction.DOWN
+Player: you"]
+	140023764418704 -> 140023764421840
+	140023764418704 -> 140023764423376
+	140023764418704 -> 140023764424912
+	140023764420240 [label="Snake heads: {'x': 10, 'y': 10}
+Reward: 0.533333
+Move: Direction.RIGHT
+Player: you"]
+	140023764420240 -> 140023764426448
+	140023764022544 [label="Snake heads: {'x': 5, 'y': 6}
+Reward: 0.309524
+Move: Direction.LEFT
+Player: you"]
+	140023764024080 [label="Snake heads: {'x': 6, 'y': 5}
+Reward: 0.309524
+Move: Direction.DOWN
+Player: you"]
+	140023764058448 [label="Snake heads: {'x': 7, 'y': 6}
+Reward: 0.450000
+Move: Direction.RIGHT
+Player: you"]
+	140023764059984 [label="Snake heads: {'x': 7, 'y': 6}
+Reward: 0.450000
+Move: Direction.DOWN
+Player: you"]
+	140023764061520 [label="Snake heads: {'x': 7, 'y': 8}
+Reward: 0.583333
+Move: Direction.UP
+Player: you"]
+	140023764063056 [label="Snake heads: {'x': 8, 'y': 7}
+Reward: 0.833333
+Move: Direction.RIGHT
+Player: you"]
+	140023764069200 [label="Snake heads: {'x': 6, 'y': 7}
+Reward: 0.450000
+Move: Direction.LEFT
+Player: you"]
+	140023764070736 [label="Snake heads: {'x': 7, 'y': 6}
+Reward: 0.450000
+Move: Direction.DOWN
+Player: you"]
+	140023764072272 [label="Snake heads: {'x': 8, 'y': 7}
+Reward: 0.833333
+Move: Direction.RIGHT
+Player: you"]
+	140023764073808 [label="Snake heads: {'x': 7, 'y': 10}
+Reward: 1.166667
+Move: Direction.UP
+Player: you"]
+	140023764091792 [label="Snake heads: {'x': 8, 'y': 9}
+Reward: 1.250000
+Move: Direction.RIGHT
+Player: you"]
+	140023764093328 [label="Snake heads: {'x': 8, 'y': 7}
+Reward: 0.833333
+Move: Direction.DOWN
+Player: you"]
+	140023764094864 [label="Snake heads: {'x': 8, 'y': 9}
+Reward: 1.250000
+Move: Direction.UP
+Player: you"]
+	140023764096336 [label="Snake heads: {'x': 9, 'y': 8}
+Reward: 0.833333
+Move: Direction.RIGHT
+Player: you"]
+	140023764107088 [label="Snake heads: {'x': 6, 'y': 7}
+Reward: 0.450000
+Move: Direction.DOWN
+Player: you"]
+	140023764141456 [label="Snake heads: {'x': 6, 'y': 7}
+Reward: 0.450000
+Move: Direction.LEFT
+Player: you"]
+	140023764142992 [label="Snake heads: {'x': 7, 'y': 6}
+Reward: 0.450000
+Move: Direction.DOWN
+Player: you"]
+	140023764144528 [label="Snake heads: {'x': 8, 'y': 7}
+Reward: 0.833333
+Move: Direction.RIGHT
+Player: you"]
+	140023764146064 [label="Snake heads: {'x': 8, 'y': 7}
+Reward: 0.833333
+Move: Direction.DOWN
+Player: you"]
+	140023764147600 [label="Snake heads: {'x': 8, 'y': 9}
+Reward: 1.250000
+Move: Direction.UP
+Player: you"]
+	140023764149136 [label="Snake heads: {'x': 9, 'y': 8}
+Reward: 0.833333
+Move: Direction.RIGHT
+Player: you"]
+	140023764152208 [label="Snake heads: {'x': 8, 'y': 9}
+Reward: 0.250000
+Move: Direction.DOWN
+Player: you"]
+	140023764153744 [label="Snake heads: {'x': 9, 'y': 10}
+Reward: 0.250000
+Move: Direction.RIGHT
+Player: you"]
+	140023764192720 [label="Snake heads: {'x': 7, 'y': 8}
+Reward: 0.583333
+Move: Direction.LEFT
+Player: you"]
+	140023764194256 [label="Snake heads: {'x': 8, 'y': 7}
+Reward: 0.833333
+Move: Direction.DOWN
+Player: you"]
+	140023764195792 [label="Snake heads: {'x': 9, 'y': 8}
+Reward: 0.833333
+Move: Direction.RIGHT
+Player: you"]
+	140023764197328 [label="Snake heads: {'x': 7, 'y': 10}
+Reward: 0.166667
+Move: Direction.LEFT
+Player: you"]
+	140023764198864 [label="Snake heads: {'x': 9, 'y': 10}
+Reward: 0.250000
+Move: Direction.RIGHT
+Player: you"]
+	140023764200400 [label="Snake heads: {'x': 9, 'y': 8}
+Reward: 0.833333
+Move: Direction.DOWN
+Player: you"]
+	140023764201936 [label="Snake heads: {'x': 9, 'y': 10}
+Reward: 1.250000
+Move: Direction.UP
+Player: you"]
+	140023764203472 [label="Snake heads: {'x': 10, 'y': 9}
+Reward: 0.833333
+Move: Direction.RIGHT
+Player: you"]
+	140023764230672 [label="Snake heads: {'x': 6, 'y': 7}
+Reward: 0.450000
+Move: Direction.DOWN
+Player: you"]
+	140023764232208 [label="Snake heads: {'x': 7, 'y': 8}
+Reward: 0.583333
+Move: Direction.RIGHT
+Player: you"]
+	140023764271184 [label="Snake heads: {'x': 5, 'y': 8}
+Reward: 0.866667
+Move: Direction.LEFT
+Player: you"]
+	140023764272720 [label="Snake heads: {'x': 6, 'y': 7}
+Reward: 0.950000
+Move: Direction.DOWN
+Player: you"]
+	140023764274256 [label="Snake heads: {'x': 6, 'y': 9}
+Reward: 5.500000
+Move: Direction.UP
+Player: you"]
+	140023764275792 [label="Snake heads: {'x': 6, 'y': 7}
+Reward: 0.950000
+Move: Direction.LEFT
+Player: you"]
+	140023764277328 [label="Snake heads: {'x': 7, 'y': 6}
+Reward: 0.700000
+Move: Direction.DOWN
+Player: you"]
+	140023764278864 [label="Snake heads: {'x': 8, 'y': 7}
+Reward: 1.083333
+Move: Direction.RIGHT
+Player: you"]
+	140023764280400 [label="Snake heads: {'x': 8, 'y': 7}
+Reward: 1.083333
+Move: Direction.DOWN
+Player: you"]
+	140023764281936 [label="Snake heads: {'x': 8, 'y': 9}
+Reward: 1.750000
+Move: Direction.UP
+Player: you"]
+	140023764283472 [label="Snake heads: {'x': 9, 'y': 8}
+Reward: 1.083333
+Move: Direction.RIGHT
+Player: you"]
+	140023764322384 [label="Snake heads: {'x': 7, 'y': 8}
+Reward: 1.083333
+Move: Direction.LEFT
+Player: you"]
+	140023764323920 [label="Snake heads: {'x': 8, 'y': 7}
+Reward: 1.083333
+Move: Direction.DOWN
+Player: you"]
+	140023764325456 [label="Snake heads: {'x': 9, 'y': 8}
+Reward: 1.083333
+Move: Direction.RIGHT
+Player: you"]
+	140023764326992 [label="Snake heads: {'x': 9, 'y': 10}
+Reward: 0.500000
+Move: Direction.RIGHT
+Player: you"]
+	140023764328528 [label="Snake heads: {'x': 9, 'y': 8}
+Reward: 1.083333
+Move: Direction.DOWN
+Player: you"]
+	140023764330064 [label="Snake heads: {'x': 9, 'y': 10}
+Reward: 1.500000
+Move: Direction.UP
+Player: you"]
+	140023764331600 [label="Snake heads: {'x': 10, 'y': 9}
+Reward: 1.083333
+Move: Direction.RIGHT
+Player: you"]
+	140023764373648 [label="Snake heads: {'x': 6, 'y': 9}
+Reward: 5.166667
+Move: Direction.LEFT
+Player: you"]
+	140023764375184 [label="Snake heads: {'x': 7, 'y': 8}
+Reward: 0.750000
+Move: Direction.DOWN
+Player: you"]
+	140023764376720 [label="Snake heads: {'x': 7, 'y': 8}
+Reward: 0.750000
+Move: Direction.LEFT
+Player: you"]
+	140023764378256 [label="Snake heads: {'x': 8, 'y': 7}
+Reward: 0.750000
+Move: Direction.DOWN
+Player: you"]
+	140023764379792 [label="Snake heads: {'x': 9, 'y': 8}
+Reward: 0.750000
+Move: Direction.RIGHT
+Player: you"]
+	140023764381328 [label="Snake heads: {'x': 9, 'y': 8}
+Reward: 0.750000
+Move: Direction.DOWN
+Player: you"]
+	140023764382864 [label="Snake heads: {'x': 9, 'y': 10}
+Reward: 0.500000
+Move: Direction.UP
+Player: you"]
+	140023764384400 [label="Snake heads: {'x': 10, 'y': 9}
+Reward: 0.750000
+Move: Direction.RIGHT
+Player: you"]
+	140023764421840 [label="Snake heads: {'x': 8, 'y': 9}
+Reward: 0.750000
+Move: Direction.LEFT
+Player: you"]
+	140023764423376 [label="Snake heads: {'x': 9, 'y': 8}
+Reward: 0.750000
+Move: Direction.DOWN
+Player: you"]
+	140023764424912 [label="Snake heads: {'x': 10, 'y': 9}
+Reward: 0.750000
+Move: Direction.RIGHT
+Player: you"]
+	140023764426448 [label="Snake heads: {'x': 10, 'y': 9}
+Reward: 0.750000
+Move: Direction.DOWN
+Player: you"]
+}

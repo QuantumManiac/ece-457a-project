@@ -20,9 +20,9 @@ import sys
 import os
 
 class Global:
-    hyper_parameters: typing.Dict = {'value': {'iter': 10, 'mutation_prob': 0.3, 'food_benefit': 5,
+    hyper_parameters: typing.Dict = {'value': {'iter': 5, 'mutation_prob': 0.3, 'food_benefit': 5,
                                                 'adj_risk': -8, 'kill_reward': 15},
-                                      'range': {'iter': [1, 100], 'mutation_prob': [0.0, 1.0],
+                                      'range': {'iter': [1, 25], 'mutation_prob': [0.0, 1.0],
                                                 'food_benefit': [2,10], 'adj_risk': [1,12],
                                                 'kill_reward':[5,20]}}
     snake_performance: typing.Dict = {'turns_alive': 0, 
@@ -32,7 +32,7 @@ class Global:
                                       'won_game': False}
 
     # TODO: Decide if we also want to keep track of the top performance (I think we should but depends on our logs)
-    #top_performance: typing.Dict = snake_performance
+    performance_history = []
 
     @classmethod
     def reset_snake_performance(cls):
@@ -54,11 +54,11 @@ class Global:
     def get_snake_performance(cls):
         return cls.snake_performance
 
+
 # info is called when you create your Battlesnake on play.battlesnake.com
 # and controls your Battlesnake's appearance
 # TIP: If you open your Battlesnake URL in a browser you should see this data
 def info() -> typing.Dict:
-    print("INFO")
 
     return {
         "apiversion": "1",
@@ -71,7 +71,7 @@ def info() -> typing.Dict:
 
 # start is called when your Battlesnake begins a game
 def start(game_state: typing.Dict):
-    print("GAME START")
+    return
 
 
 # end is called when your Battlesnake finishes a game
@@ -83,8 +83,7 @@ def end(game_state: typing.Dict):
     # defning winning such that it is only if there are more than one snake playing.
     if len(game_state["board"]["snakes"]) == 1 and game_state["board"]["snakes"][0]["name"] == game_state["you"]["name"]:
         Global.snake_performance["won_game"] = True
-
-    print("GAME OVER\n")
+    return
 
 
 # move is called on every turn and returns your next move
@@ -149,8 +148,6 @@ def move(game_state: typing.Dict) -> typing.Dict:
     else:
         next_move = random.choice(safe_moves)
         next_move = next_move[0]  
-
-    print(f"MOVE {game_state['turn']}: {next_move}")
     return {"move": next_move}
 
 def mutate(best_moves: typing.List, mutation_prob: float) -> typing.List:
@@ -304,11 +301,11 @@ def calculate_fitness(won_game: bool):
     # TODO: to come up with an optimal weighting for these
     # I would say it should be Win > Survival >> size > kill > health
     # also depending on the type of game (solo or versus) it would be slightly adjusted
-    WIN_TIME_GAIN = 1
-    SURVIVAL_TIME_GAIN = 1
-    KILL_GAIN = 1
-    SIZE_GAIN = 1
-    AVG_HEALTH_GAIN = 1
+    WIN_TIME_GAIN = 0.0 # if playing alone
+    SURVIVAL_TIME_GAIN = 0.9
+    KILL_GAIN = 0.0 # if playing alone
+    SIZE_GAIN = 0.05
+    AVG_HEALTH_GAIN = 0.05
 
     snake_performance = Global.get_snake_performance()
     fitness =  KILL_GAIN*snake_performance['num_kills'] + \
@@ -357,14 +354,22 @@ def hyper_parameter_local_search(iter_per_set, total_iter):
         for i in range(1, iter_per_set + 1):
             Global.reset_snake_performance
             run_game(False)
-            avg_fitness = (calculate_fitness(won_game=False) + avg_fitness) / i
+            local_fitness = calculate_fitness(won_game=False)
+            avg_fitness = (local_fitness + avg_fitness*(i-1)) / i
+            Global.snake_performance["fitness"] = local_fitness
+            hyper_params = Global.get_hyper_parameters()["value"]
+            hyper_params["fitness"] = local_fitness
+            Global.performance_history.append((hyper_params))
 
         # accept or regect neighbour
         if avg_fitness > best_fitness:
             hyper_parameters = neighbour_params
             best_fitness = avg_fitness
-    
+
     Global.set_hyper_parameters(hyper_parameters)
+    with open('performance.txt', 'w') as f:
+        for line in Global.performance_history:
+            f.write(f"{line}\n")
     print(f"Best HyperParams: {hyper_parameters['value']}")
     print(f"Best Fitness: {best_fitness}")
 
@@ -406,8 +411,8 @@ if __name__ == "__main__":
         sys.exit()
 
     # TODO: Likely need to change these values
-    INNER_LOOP_ITERATIONS = 10
-    OUTER_LOOP_ITERATIONS = 10
+    INNER_LOOP_ITERATIONS = 25
+    OUTER_LOOP_ITERATIONS = 25
 
     hyper_parameter_local_search(INNER_LOOP_ITERATIONS, OUTER_LOOP_ITERATIONS)
     sys.exit()

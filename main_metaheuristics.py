@@ -372,7 +372,7 @@ def hyper_parameter_local_search(iter_per_set, total_iter):
 
 def run_game(run_in_browser: bool):
     command = [
-        './battlesnake', 'play',
+        'battlesnake', 'play',
         '--name', 'meta_snake',
         '--url', 'http://127.0.0.1:8000',
     ]

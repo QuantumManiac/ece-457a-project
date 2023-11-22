@@ -22,11 +22,19 @@ import sys
 class Global:
     hyper_paramerters: typing.Dict = {'value': {'iter': 10, 'mutation_prob': 0.3},
                                       'range': {'iter': [1, 100], 'mutation_prob': [0.0, 1.0]}}
-    snake_performance: typing.Dict = {'turns_alive': 0, 'num_kills': 0, 'snake_size': 1, 'avg_health': 100, 'won_game': False}
+    snake_performance: typing.Dict = {'turns_alive': 0, 
+                                      'num_kills': 0, 
+                                      'snake_size': 1, 
+                                      'avg_health': 100, 
+                                      'won_game': False}
 
     @classmethod
     def reset_snake_performance(cls):
-        cls.snake_performance = {'turns_alive': 0, 'num_kills': 0, 'snake_size': 1, 'avg_health': 100, 'won_game': False}
+        cls.snake_performance = {'turns_alive': 0, 
+                                 'num_kills': 0, 
+                                 'snake_size': 1, 
+                                 'avg_health': 100, 
+                                 'won_game': False}
 
     @classmethod
     def get_hyper_parameters(cls):
@@ -246,37 +254,68 @@ def assess_cost(game_state: typing.Dict, proposed_moves: typing.List):
 
     return est_cost
 
-def calculate_fitness(win_time_gain, survival_time_gain, kill_gain, avg_health_gain, won_game: bool):
-    a = 0 if not won_game else a
-    b = 0 if won_game else b
-    snake_performance = Global.get_snake_performance()
-
-    return (win_time_gain / snake_performance['turns_alive']) + \
-            survival_time_gain*snake_performance["turns_alive"] + \
-            kill_gain*snake_performance["snake_size"] + \
-            avg_health_gain*snake_performance['avg_health']
-
-def hyper_parameter_local_search(iter_per_set, total_iter):
-    # Cost function gain parameters
+def calculate_fitness(won_game: bool):
     WIN_TIME_GAIN = 1
     SURVIVAL_TIME_GAIN = 1
     KILL_GAIN = 1
     SIZE_GAIN = 1
     AVG_HEALTH_GAIN = 1
 
-    hyper_parameters = Global.get_hyper_parameters()
+    snake_performance = Global.get_snake_performance()
 
-    # set initial hyperparams
+    fitness =  KILL_GAIN*snake_performance['num_kills'] + \
+               SIZE_GAIN*snake_performance['snake_size'] + \
+               AVG_HEALTH_GAIN*snake_performance['avg_health']
+    if won_game:
+        fitness += WIN_TIME_GAIN / snake_performance['turns_alive'] 
+    else:
+        fitness += SURVIVAL_TIME_GAIN * snake_performance['turns_alive']
+    
+    return fitness
     
 
-    # get fitness for initial params
+def hyper_parameter_local_search(iter_per_set, total_iter):
+    # randomly set initial hyperparams
+    hyper_parameters = Global.get_hyper_parameters()
+
+    for param, bounds in hyper_parameters['range'].items():
+        if all(isinstance(val, int) for val in bounds):  # for integer parameters
+            hyper_parameters['value'][param] = random.randint(bounds[0], bounds[1])
+            continue
+        hyper_parameters['value'][param] = random.uniform(bounds[0], bounds[1])
+
     Global.set_hyper_parameters(hyper_parameters)
 
     # run for a set number of iterations
+    best_fitness = 0
+    for _ in range(total_iter):
+        # generate neighbour
+        neighbour_params = hyper_parameters.copy()
+        for param, bounds in neighbour_params["range"].items():
+            value = neighbour_params["value"]
+            if all(isinstance(val, int) for val in bounds):  # integer params
+                value[param]  += random.randint(-2, 2)
+            else:
+                value[param] = random.gauss(value[param], 0.1)
+            # Ensure neighbour in bounds
+            value[param] = bounds[0] if value[param] < bounds[0] else value[param]
+            value[param] = bounds[1] if value[param] > bounds[1] else value[param]
 
-    calculate_fitness(WIN_TIME_GAIN, SURVIVAL_TIME_GAIN, KILL_GAIN, SIZE_GAIN, AVG_HEALTH_GAIN)
+        # test neighbour
+        Global.set_hyper_parameters(neighbour_params)
+        avg_fitness = 0
+        for i in range(1, iter_per_set + 1):
+            run_game(False)
+            avg_fitness = (calculate_fitness(won_game=False) + avg_fitness) / i
 
-
+        # accept or regect neighbour
+        if avg_fitness > best_fitness:
+            hyper_parameters = neighbour_params
+            best_fitness = avg_fitness
+    
+    Global.set_hyper_parameters(hyper_parameters)
+    print(f"Best HyperParams: {hyper_parameters['value']}")
+    print(f"Best Fitness: {best_fitness}")
     return hyper_parameters
 
 def run_game(run_in_browser: bool):
@@ -292,9 +331,8 @@ def run_game(run_in_browser: bool):
 # Start server when `python main.py` is run
 if __name__ == "__main__":
     from server import run_server
-    HYPER_PARAMETER_OPTIMIZATION = False
-    # Add more parameters for more fitness function variables
 
+    HYPER_PARAMETER_OPTIMIZATION = True
 
     server_thread = threading.Thread(target=run_server, args=({"info": info, "start": start, "move": move, "end": end},))
     server_thread.start()
@@ -308,8 +346,3 @@ if __name__ == "__main__":
     OUTER_LOOP_ITERATIONS = 100
 
     hyper_parameter_local_search(INNER_LOOP_ITERATIONS, OUTER_LOOP_ITERATIONS)
-
-    for _ in range(3):
-        run_game(False)
-        Global.hyper_paramerters['value']['mutation_prob'] += 0.3
-        Global.reset_snake_performance()

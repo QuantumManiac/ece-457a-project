@@ -23,7 +23,7 @@ git submodule init
 git submodule update
 
 # Create a virtualenv
-python -m venv venv
+python3 -m venv venv
 
 # Activate the virtualenv...
 # ...on MacOS/Linux
@@ -54,10 +54,10 @@ Make sure to run the snakes before the server is started.
 
 ```sh
 # Run the game theory snake
-PORT=8080 python main_game_theory.py
+python main_game_theory.py
 
 # Run the metaheuristics snake
-PORT=8081 python main_metaheuristics.py
+python main_metaheuristics.py
 ```
 
 #### Running the game server

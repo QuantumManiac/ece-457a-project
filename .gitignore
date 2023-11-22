@@ -161,3 +161,6 @@ cython_debug/
 
 # Built binaries
 battlesnake
+
+# Game state visualization
+game_state.*

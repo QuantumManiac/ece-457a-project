@@ -14,7 +14,7 @@ from typing import Dict, List, Set, Optional, Any, Tuple
 import enum
 from copy import deepcopy
 
-NUM_LAYERS = 7
+NUM_LAYERS = 6
 """Number of layers to generate in the state tree"""
 LAYER_REWARD_DECAY = 0.5 
 """Decay multiplier for rewards in each layer. This is to put higher value to sooner rewards than later ones"""
@@ -27,7 +27,6 @@ class Player(enum.Enum):
     """The player that is making the move"""
     YOU = 'you'
     OPPONENT = 'opponent'
-    NOW = 'now' # The current state of the board, for the root state of the decision tree
 
 class Direction(enum.Enum):
     """The direction to move in"""
@@ -80,12 +79,13 @@ def end(game_state: Dict[str, Any]):
         visualize_game_state(turn_history[int(turn)], int(depth))
 
 
-def generate_state_tree(root_state: State, layers: int):
+def generate_state_tree(root_state: State, layers: int, is_root = False):
     """Generates a tree of states for the given root state
 
     Args:
         root_state: The state to generate the tree from
         layers: The number of layers to generate
+        is_root: Whether or not the given state is the root state. This is important because the child states of the root are always the player's states
 
     Returns:
         The generated state tree
@@ -97,10 +97,11 @@ def generate_state_tree(root_state: State, layers: int):
     player_turn = root_state.player_turn
     # If an opponent exists, we need to alternate between players
     if "opponent" in root_state.state:
-        if player_turn == Player.NOW:
+        if is_root:
+            player_turn = Player.YOU
             next_player_turn = Player.YOU
         else:
-            next_player_turn = Player.OPPONENT if player_turn == Player.YOU else Player.YOU
+            next_player_turn = Player.YOU if player_turn == Player.OPPONENT else Player.OPPONENT
     else:
         next_player_turn = player_turn
 
@@ -168,8 +169,8 @@ def get_next_moves(state_tree: State) -> Dict[Direction, Tuple[int, float]]:
 # See https://docs.battlesnake.com/api/example-move for available data
 def move(game_state: Dict[str, Any]) -> Dict[str, Any]:
     game_state = simplify_game_state(game_state)
-    state_tree = State(game_state, None, 0, Player.NOW)
-    generate_state_tree(state_tree, NUM_LAYERS)
+    state_tree = State(game_state, None, 0, Player.YOU)
+    generate_state_tree(state_tree, NUM_LAYERS, is_root=True)
     turn_history.append(state_tree)
 
     next_moves = get_next_moves(state_tree)
@@ -204,7 +205,7 @@ def get_possible_moves(game_state: State, player: Player) -> Set[Direction]:
             safe_moves.discard(move)
             continue
 
-        # Discard move if it makes snake hit its body
+        # Discard move if it makes snake hit itself
         not_safe = False
         for body_coords in game_state.state[player.value]["body"][1:]:
             if move_coord == body_coords:
@@ -212,21 +213,17 @@ def get_possible_moves(game_state: State, player: Player) -> Set[Direction]:
                 not_safe = True
                 break
 
-            # how can we make sure we're hitting the head "head-on"?
-            # this also takes into consideration that the opponents best move would be to be just as aggressive as us
-            # we can use some sort of flood fill algorithm to get negative reward
-            if "opponent" in game_state.state:
-                curr_opp = Player.OPPONENT if player.value == Player.YOU else Player.YOU
-                pursue_head = 1 if len(game_state.state[curr_opp.value]["body"]) < len(game_state.state[player.value]["body"]) else 0
-                not_safe_inner = False
-                for opp_coords in game_state.state[curr_opp.value]["body"][pursue_head:]:
-                    if move_coord == opp_coords:
-                        safe_moves.discard(move)
-                        not_safe = True
-                        not_safe_inner = True
-                        break
+        if not_safe:
+            continue
 
-                if not_safe_inner:
+        # Discard move if it makes snake hit opponent
+        if "opponent" in game_state.state:
+            curr_opp = Player.YOU if player.value == Player.OPPONENT else Player.OPPONENT
+            pursue_head = 1 if len(game_state.state[curr_opp.value]["body"]) < len(game_state.state[player.value]["body"]) else 0
+            for opp_coords in game_state.state[curr_opp.value]["body"][pursue_head:]:
+                if move_coord == opp_coords:
+                    safe_moves.discard(move)
+                    not_safe = True
                     break
 
         if not_safe:

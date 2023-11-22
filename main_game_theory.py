@@ -20,6 +20,9 @@ LAYER_REWARD_DECAY = 0.5
 """Decay multiplier for rewards in each layer. This is to put higher value to sooner rewards than later ones"""
 AGGRESSION_MULTIPLIER = 0.25
 """Aggression multiplier to adjust how aggressive our snake is in regards to hunting down opponent"""
+MAX_DANGEROUS_ENCLOSED_SPACE = 10
+"""Enclosed spaces smaller than this are considered dangerous and therefore to be avoided if the snake can't fit in them"""
+
 
 turn_history = []
 
@@ -63,13 +66,12 @@ def info() -> Dict[str, Any]:
 
 # start is called when your Battlesnake begins a game
 def start(game_state: Dict[str, Any]):
-    turn_history = []
     print("GAME START")
 
 
 # end is called when your Battlesnake finishes a game
 def end(game_state: Dict[str, Any]):
-    print("GAME OVER\n")
+    print(f"GAME OVER. Turns Done: {len(turn_history)}\n")
     while True:
         turn = input("Select turn to view: ")
         if turn == "q":
@@ -229,7 +231,35 @@ def get_possible_moves(game_state: State, player: Player) -> Set[Direction]:
         if not_safe:
             continue
 
+        # Discard moves that lead to an enclosed space that the snake can't fit in
+        snake_size = len(game_state.state[player.value]["body"])
+        if snake_size >= MAX_DANGEROUS_ENCLOSED_SPACE and not can_fit(game_state.state, MAX_DANGEROUS_ENCLOSED_SPACE, move_coord):
+            safe_moves.discard(move)
+
     return safe_moves
+
+def can_fit(game_state: Dict[str, Any], size: int, coordinate: Dict[str, int]) -> bool:
+    """Utilizes a flood fill algorithm to determine if the snake can fit in the potentially enclosed space at a given coordinate"""
+
+    def dfs(x: int, y: int, visited: Set[Tuple[int, int]]) -> bool:
+        if (x, y) in visited:
+            return False
+        
+        if x < 0 or x >= game_state["board"]["width"] or y < 0 or y >= game_state["board"]["height"] \
+              or {"x": x, "y": y} in game_state["you"]["body"] \
+              or ("opponent" in game_state and {"x": x, "y": y} in game_state["opponent"]["body"]):
+            return False
+        if len(visited) == size:
+            return True
+
+        visited.add((x, y))
+        if dfs(x+1, y, visited) or dfs(x-1, y, visited) or dfs(x, y+1, visited) or dfs(x, y-1, visited):
+            return True
+        visited.remove((x, y))
+        return False
+    
+    return dfs(coordinate["x"], coordinate["y"], set())
+    
 
 def get_snake_move_coord(game_state: Dict[str, Any], direction: Direction, player: Player) -> Dict[str, int]:
     """Get the coordinate that the snake will move to if it moves in the given direction
@@ -414,4 +444,4 @@ def aggression_reward(game_state: State, player: Player) -> float:
 if __name__ == "__main__":
     from server import run_server
 
-    run_server({"info": info, "start": start, "move": move, "end": end})
+    run_server({"info": info, "start": start, "move": move, "end": end},  8080)

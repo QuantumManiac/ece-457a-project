@@ -182,6 +182,27 @@ def is_in_body(body: typing.Dict, cell: typing.List) -> bool:
             return True
     return False
 
+def enemy_proximity(game_state: typing.Dict, cell: typing.List) -> int:
+    ret = 0
+    for enemy in game_state["board"]["snakes"]:
+        if enemy["name"] == game_state["you"]["name"]:
+            continue
+        
+        if ret == 2 or ret == 3:
+            return ret
+        
+        e_bod = enemy["body"]
+        for seg_i in range(len(e_bod)):
+            if cell[0] == e_bod[seg_i]["x"] and cell[1] == e_bod[seg_i]["y"]:
+                ret = 2 # Indicate a potential body collision
+            if seg_i == 0:
+                if (abs(cell[0] - e_bod[seg_i]["x"]) == 1 and cell[1] == e_bod[seg_i]["y"]) or (abs(cell[1] - e_bod[seg_i]["y"]) == 1 and cell[0] == e_bod[seg_i]["x"]):
+                    if ret != 2:
+                        ret = 1 # Indicate adjacency risk but don't override collision
+                    if len(e_bod) < len(game_state["you"]["body"]):
+                        ret = 3 # Indicate that you want to eat them as a nice little treat
+    return ret
+
 def assess_cost(game_state: typing.Dict, proposed_moves: typing.List):
     if len(proposed_moves) == 0:
         return -1
@@ -202,8 +223,15 @@ def assess_cost(game_state: typing.Dict, proposed_moves: typing.List):
         elif move == "left":
             pos_x -= 1
 
-        if pos_y > y_max or pos_y < 0 or pos_x > x_max or pos_x < 0 or is_in_body(body, [pos_x, pos_y]):
+        adj_risk = enemy_proximity(game_state, [pos_x, pos_y])
+
+        if pos_y > y_max or pos_y < 0 or pos_x > x_max or pos_x < 0 or is_in_body(body, [pos_x, pos_y]) or adj_risk == 2:
             return -1
+
+        if adj_risk == 1:
+            est_cost -= 8
+        elif adj_risk == 3:
+            est_cost += 15
 
         body.insert(0,{"x": pos_x, "y": pos_y})
         for food_pos in game_state["board"]["food"]:

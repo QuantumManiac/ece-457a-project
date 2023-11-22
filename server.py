@@ -33,7 +33,7 @@ def run_server(handlers: typing.Dict):
     @app.after_request
     def identify_server(response):
         response.headers.set(
-            "server", "battlesnake/github/starter-snake-python"
+            "server", "battlesnake/github/ece_snake"
         )
         return response
 

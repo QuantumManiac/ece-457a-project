@@ -183,17 +183,23 @@ def is_in_body(body: typing.Dict, cell: typing.List) -> bool:
     return False
 
 def enemy_proximity(game_state: typing.Dict, cell: typing.List) -> int:
+    ret = 0
     for enemy in game_state["board"]["snakes"]:
-        if enemy["name"] == "ECE SNAKEY":
+        if enemy["name"] == game_state["you"]["name"]:
             continue
+        
+        if ret == 2:
+            print("BEWARE")
+            return ret
+        
         e_bod = enemy["body"]
         for seg_i in range(len(e_bod)):
-            if cell["x"] == e_bod[seg_i]["x"] and cell["y"] == e_bod[seg_i]["y"]:
-                return 2 # Indicate a potential body collision
-            if seg_i == 0:
-                if (abs(cell["x"] - e_bod[seg_i]["x"]) == 1 and cell["y"] == e_bod[seg_i]["y"]) or (abs(cell["y"] - e_bod[seg_i]["y"]) == 1 and cell["x"] == e_bod[seg_i]["x"]):
-                    return 1 # Indicate adjacency risk
-    return 0
+            if cell[0] == e_bod[seg_i]["x"] and cell[1] == e_bod[seg_i]["y"]:
+                ret = 2 # Indicate a potential body collision
+            if seg_i == 0 and ret != 2:
+                if (abs(cell[0] - e_bod[seg_i]["x"]) == 1 and cell[1] == e_bod[seg_i]["y"]) or (abs(cell[1] - e_bod[seg_i]["y"]) == 1 and cell[0] == e_bod[seg_i]["x"]):
+                    ret = 1 # Indicate adjacency risk
+    return ret
 
 def assess_cost(game_state: typing.Dict, proposed_moves: typing.List):
     if len(proposed_moves) == 0:

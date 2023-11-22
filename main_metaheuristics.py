@@ -17,16 +17,22 @@ import subprocess
 import threading
 import time
 import sys
-
+import os
 
 class Global:
-    hyper_paramerters: typing.Dict = {'value': {'iter': 10, 'mutation_prob': 0.3},
-                                      'range': {'iter': [1, 100], 'mutation_prob': [0.0, 1.0]}}
+    hyper_parameters: typing.Dict = {'value': {'iter': 10, 'mutation_prob': 0.3, 'food_benefit': 5,
+                                                'adj_risk': -8, 'kill_reward': 15},
+                                      'range': {'iter': [1, 100], 'mutation_prob': [0.0, 1.0],
+                                                'food_benefit': [2,10], 'adj_risk': [1,12],
+                                                'kill_reward':[5,20]}}
     snake_performance: typing.Dict = {'turns_alive': 0, 
                                       'num_kills': 0, 
                                       'snake_size': 1, 
                                       'avg_health': 100, 
                                       'won_game': False}
+
+    # TODO: Decide if we also want to keep track of the top performance (I think we should but depends on our logs)
+    #top_performance: typing.Dict = snake_performance
 
     @classmethod
     def reset_snake_performance(cls):
@@ -38,16 +44,15 @@ class Global:
 
     @classmethod
     def get_hyper_parameters(cls):
-        return cls.hyper_paramerters
+        return cls.hyper_parameters
     
     @classmethod
     def set_hyper_parameters(cls, hyper_params: typing.Dict):
-        cls.hyper_paramerters = hyper_params
+        cls.hyper_parameters = hyper_params
     
     @classmethod
     def get_snake_performance(cls):
         return cls.snake_performance
-
 
 # info is called when you create your Battlesnake on play.battlesnake.com
 # and controls your Battlesnake's appearance
@@ -71,6 +76,14 @@ def start(game_state: typing.Dict):
 
 # end is called when your Battlesnake finishes a game
 def end(game_state: typing.Dict):
+    Global.snake_performance["snake_size"] = game_state["you"]["length"]
+    Global.snake_performance["turns_alive"] = game_state["turn"]
+    Global.snake_performance["avg_health"] /= Global.snake_performance["turns_alive"]
+
+    # defning winning such that it is only if there are more than one snake playing.
+    if len(game_state["board"]["snakes"]) == 1 and game_state["board"]["snakes"][0]["name"] == game_state["you"]["name"]:
+        Global.snake_performance["won_game"] = True
+
     print("GAME OVER\n")
 
 
@@ -79,9 +92,13 @@ def end(game_state: typing.Dict):
 # See https://docs.battlesnake.com/api/example-move for available data
 def move(game_state: typing.Dict) -> typing.Dict:
 
+    # Update the huper parameters
     # iter, mutation_prob = 10, 0.3
     hyper_params = Global.get_hyper_parameters()['value']
     iter, mutation_prob = hyper_params["iter"], hyper_params["mutation_prob"]
+    # running params
+    Global.snake_performance["avg_health"] += game_state["you"]["health"]
+
 
     max_while = 25
     best_move_set, best_cost = None, -1
@@ -95,7 +112,7 @@ def move(game_state: typing.Dict) -> typing.Dict:
                   generate_moves(game_state,1)]
 
     while best_move_set is None and max_while > 0:
-        for i in range(iter):
+        for _ in range(iter):
             max = -1
             next_move = "down"
             num_steps = len(game_state["you"]["body"])
@@ -238,6 +255,7 @@ def enemy_proximity(game_state: typing.Dict, cell: typing.List) -> int:
                         ret = 1 # Indicate adjacency risk but don't override collision
                     if len(e_bod) < len(game_state["you"]["body"]):
                         ret = 3 # Indicate that you want to eat them as a nice little treat
+                        Global.snake_performance["num_kills"] += 1
     return ret
 
 def assess_cost(game_state: typing.Dict, proposed_moves: typing.List):
@@ -266,14 +284,14 @@ def assess_cost(game_state: typing.Dict, proposed_moves: typing.List):
             return -1
 
         if adj_risk == 1:
-            est_cost -= 8
+            est_cost -= Global.hyper_parameters["value"]["adj_risk"]
         elif adj_risk == 3:
-            est_cost += 15
+            est_cost += Global.hyper_parameters["value"]["kill_reward"]
 
         body.insert(0,{"x": pos_x, "y": pos_y})
         for food_pos in game_state["board"]["food"]:
             if food_pos["x"] == pos_x and food_pos["y"] == pos_y:
-                est_cost += 5
+                est_cost += Global.hyper_parameters["value"]["food_benefit"]
                 grow = True
         if grow is False:
             body.pop()
@@ -283,6 +301,9 @@ def assess_cost(game_state: typing.Dict, proposed_moves: typing.List):
     return est_cost
 
 def calculate_fitness(won_game: bool):
+    # TODO: to come up with an optimal weighting for these
+    # I would say it should be Win > Survival >> size > kill > health
+    # also depending on the type of game (solo or versus) it would be slightly adjusted
     WIN_TIME_GAIN = 1
     SURVIVAL_TIME_GAIN = 1
     KILL_GAIN = 1
@@ -290,10 +311,11 @@ def calculate_fitness(won_game: bool):
     AVG_HEALTH_GAIN = 1
 
     snake_performance = Global.get_snake_performance()
-
     fitness =  KILL_GAIN*snake_performance['num_kills'] + \
                SIZE_GAIN*snake_performance['snake_size'] + \
                AVG_HEALTH_GAIN*snake_performance['avg_health']
+
+    # not sure why we are dividing here? this makes win < survival if lost?
     if won_game:
         fitness += WIN_TIME_GAIN / snake_performance['turns_alive'] 
     else:
@@ -333,6 +355,7 @@ def hyper_parameter_local_search(iter_per_set, total_iter):
         Global.set_hyper_parameters(neighbour_params)
         avg_fitness = 0
         for i in range(1, iter_per_set + 1):
+            Global.reset_snake_performance
             run_game(False)
             avg_fitness = (calculate_fitness(won_game=False) + avg_fitness) / i
 
@@ -344,6 +367,7 @@ def hyper_parameter_local_search(iter_per_set, total_iter):
     Global.set_hyper_parameters(hyper_parameters)
     print(f"Best HyperParams: {hyper_parameters['value']}")
     print(f"Best Fitness: {best_fitness}")
+
     return hyper_parameters
 
 def run_game(run_in_browser: bool):
@@ -353,15 +377,26 @@ def run_game(run_in_browser: bool):
         '--url', 'http://127.0.0.1:8000',
     ]
 
-    command += '--browser' if run_in_browser else command
-    subprocess.run(command)
+    if run_in_browser:
+        command.append('--browser')
+
+    if os.name == 'nt':
+        command = [
+            'battlesnake', 'play',
+            '--name', 'meta_snake',
+            '--url', 'http://127.0.0.1:8000',
+        ]
+        if run_in_browser:
+            command.append('--browser', '')
+        subprocess.run(command, shell=True)
+    else:
+        subprocess.run(command)
 
 # Start server when `python main.py` is run
 if __name__ == "__main__":
     from server import run_server
 
     HYPER_PARAMETER_OPTIMIZATION = True
-
     server_thread = threading.Thread(target=run_server, args=({"info": info, "start": start, "move": move, "end": end},))
     server_thread.start()
     time.sleep(0.1)
@@ -370,7 +405,9 @@ if __name__ == "__main__":
         run_game(run_in_browser=True)
         sys.exit()
 
+    # TODO: Likely need to change these values
     INNER_LOOP_ITERATIONS = 10
-    OUTER_LOOP_ITERATIONS = 100
+    OUTER_LOOP_ITERATIONS = 10
 
     hyper_parameter_local_search(INNER_LOOP_ITERATIONS, OUTER_LOOP_ITERATIONS)
+    sys.exit()

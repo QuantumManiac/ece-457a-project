@@ -14,15 +14,22 @@ from typing import Dict, List, Set, Optional, Any, Tuple
 import enum
 from copy import deepcopy
 
-NUM_LAYERS = 6
+NUM_LAYERS = 5
 """Number of layers to generate in the state tree"""
 LAYER_REWARD_DECAY = 0.5 
 """Decay multiplier for rewards in each layer. This is to put higher value to sooner rewards than later ones"""
 AGGRESSION_MULTIPLIER = 0.25
 """Enclosed spaces smaller than this are considered dangerous and therefore to be avoided if the snake can't fit in them"""
-DANGEROUS_ENCLOSED_SPACE_REWARD = -1000
-
-turn_history = []
+DANGEROUS_ENCLOSED_SPACE_REWARD = -100
+"""The penalty for moving into a dangerous enclosed space"""
+HUNGER_THRESHOLD = 20
+"""The health threshold at which the snake is considered hungry and should prioritize food"""
+AVOID_EDGE_REWARD = -5
+"""The penalty for moving towards the edge of the board"""
+BESIDE_FOOD_REWARD = 10
+"""The reward for moving to the food when the snake is already beside it"""
+AVOID_HEAD_REWARD = -100
+"""The penalty for moving towards the opponent's head when the opponent is larger"""
 
 class Player(enum.Enum):
     """The player that is making the move"""
@@ -50,6 +57,9 @@ class State:
         self.next_states: List[State] = []
         """The next states that can be reached from this state"""
 
+
+turn_history: List[State] = []
+
 def info() -> Dict[str, Any]:
     print("INFO")
 
@@ -65,11 +75,12 @@ def info() -> Dict[str, Any]:
 # start is called when your Battlesnake begins a game
 def start(game_state: Dict[str, Any]):
     print("GAME START")
+    turn_history.clear()
 
 
 # end is called when your Battlesnake finishes a game
 def end(game_state: Dict[str, Any]):
-    print(f"GAME OVER. Turns Done: {len(turn_history)}\n")
+    print(f"GAME OVER. Turns Done: {len(turn_history)}\n\n")
     while True:
         turn = input("Select turn to view: ")
         if turn == "q":
@@ -219,7 +230,7 @@ def get_possible_moves(game_state: State, player: Player) -> Set[Direction]:
         # Discard move if it makes snake hit opponent
         if "opponent" in game_state.state:
             curr_opp = Player.YOU if player.value == Player.OPPONENT else Player.OPPONENT
-            pursue_head = 1 if len(game_state.state[curr_opp.value]["body"]) < len(game_state.state[player.value]["body"]) else 0
+            pursue_head = 1 if game_state.state[curr_opp.value]["length"] < game_state.state[player.value]["length"] else 0
             for opp_coords in game_state.state[curr_opp.value]["body"][pursue_head:]:
                 if move_coord == opp_coords:
                     safe_moves.discard(move)
@@ -306,27 +317,48 @@ def coord_to_reward(game_state: State, coords: Dict[str, int], player_turn: Play
         _description_
     """
     reward = 0
+    player = player_turn.value
+    opponent = Player.YOU.value if player_turn == Player.OPPONENT else Player.OPPONENT.value
     
     # Reward from moving closer to food
-    for food_coord in game_state.state["board"]["food"]:
-        food_x = food_coord["x"]
-        food_y = food_coord["y"]
-        x = coords["x"]
-        y = coords["y"]
-        dist = get_manhattan_distance(x, y, food_x, food_y)
+    # Only add reward if the snake is smaller or equal to the opponent, or hungry
+    if game_state.state[player_turn.value]["health"] < HUNGER_THRESHOLD or \
+          ("opponent" in game_state.state and game_state.state[player]["length"] <= game_state.state[opponent]["length"]):
+        for food_coord in game_state.state["board"]["food"]:
+            food_x = food_coord["x"]
+            food_y = food_coord["y"]
+            x = coords["x"]
+            y = coords["y"]
+            dist = get_manhattan_distance(x, y, food_x, food_y)
 
-        if dist == 0:
-            reward += 5
-        else:
-            reward += 1/dist
+            if dist == 0:
+                reward += BESIDE_FOOD_REWARD
+            else:
+                reward += 1/dist
 
     # Reward from moving closer to opponent
-    reward += AGGRESSION_MULTIPLIER * aggression_reward(game_state, player_turn)
+    if "opponent" in game_state.state:
+        reward += AGGRESSION_MULTIPLIER * aggression_reward(game_state, player_turn)
 
-    # Negative reward if the snake is moving into a dangerous enclosed space
-    snake_size = len(game_state.state[player_turn.value]["body"])
+    # Penalty if the snake is moving towards the opponent's head when the opponent is larger
+    if "opponent" in game_state.state and game_state.state[player]["length"] <= game_state.state[opponent]["length"]:
+        opp_head = game_state.state[opponent]["body"][0]
+        opp_head_x = opp_head["x"]
+        opp_head_y = opp_head["y"]
+        x = coords["x"]
+        y = coords["y"]
+        dist = get_manhattan_distance(x, y, opp_head_x, opp_head_y)
+        if dist <= 1:
+            reward += AVOID_HEAD_REWARD
+
+    # Penalty if the snake is moving into a dangerous enclosed space
+    snake_size = game_state.state[player_turn.value]["length"]
     if not can_fit(game_state.state, snake_size, coords):
         reward += DANGEROUS_ENCLOSED_SPACE_REWARD
+
+    # Penalty if the snake is moving towards the edge of the board
+    if coords["x"] == 0 or coords["x"] == game_state.state["board"]["width"] - 1 or coords["y"] == 0 or coords["y"] == game_state.state["board"]["height"] - 1:
+        reward += AVOID_EDGE_REWARD
 
     return reward
 
@@ -343,6 +375,8 @@ def simplify_snake(snake: Dict[str, Any]) -> Dict[str, Any]:
         "health": snake["health"],
         "body": snake["body"],
         "length": snake["length"],
+        "latency": snake["latency"],
+        "health": snake["health"],
     }
     return simplified_snake
 
@@ -357,6 +391,7 @@ def simplify_game_state(game_state: Dict[str, Any]) -> Dict[str, Any]:
     """
     simplified_game_state = {
         "turn": game_state["turn"],
+        "timeout": game_state["game"]["timeout"],
         "board": {
             "height": game_state["board"]["height"],
             "width": game_state["board"]["width"],
@@ -390,6 +425,7 @@ def move_snake(game_state: Dict[str, Any], direction: Direction, player: Player)
         new_game_state[player.value]["body"].pop()
     else:
         new_game_state['board']['food'].remove(new_head_coord)
+        new_game_state[player.value]["length"] += 1
     return new_game_state
 
 def visualize_game_state(game_state: State, max_depth: int = NUM_LAYERS):
@@ -424,16 +460,14 @@ def aggression_reward(game_state: State, player: Player) -> float:
     player_x = game_state.state[Player.YOU.value]["body"][0]["x"]
     player_y = game_state.state[Player.YOU.value]["body"][0]["y"]
 
-    if "opponent" in game_state.state:
-        opp_x = game_state.state[Player.OPPONENT.value]["body"][0]["x"]
-        opp_y = game_state.state[Player.OPPONENT.value]["body"][0]["y"]
 
-        # will take tweaking to make sure it's not too aggressive
-        curr_opp_value = Player.OPPONENT if player == Player.YOU else Player.YOU
-        if len(game_state.state[curr_opp_value.value]["body"]) < len(game_state.state[player.value]["body"]):
-            return get_manhattan_distance(player_x, player_y, opp_x, opp_y)
-        else:
-            return 0
+    opp_x = game_state.state[Player.OPPONENT.value]["body"][0]["x"]
+    opp_y = game_state.state[Player.OPPONENT.value]["body"][0]["y"]
+
+    # will take tweaking to make sure it's not too aggressive
+    curr_opp_value = Player.OPPONENT if player == Player.YOU else Player.YOU
+    if game_state.state[curr_opp_value.value]["length"] < game_state.state[player.value]["length"]:
+        return get_manhattan_distance(player_x, player_y, opp_x, opp_y)
     else:
         return 0
 

@@ -307,6 +307,7 @@ def calculate_fitness(won_game: bool):
     SIZE_GAIN = 0.05
     AVG_HEALTH_GAIN = 0.05
 
+    fitness = 0
     snake_performance = Global.get_snake_performance()
     fitness =  KILL_GAIN*snake_performance['num_kills'] + \
                SIZE_GAIN*snake_performance['snake_size'] + \
@@ -357,8 +358,10 @@ def hyper_parameter_local_search(iter_per_set, total_iter):
             local_fitness = calculate_fitness(won_game=False)
             avg_fitness = (local_fitness + avg_fitness*(i-1)) / i
             Global.snake_performance["fitness"] = local_fitness
-            hyper_params = Global.get_hyper_parameters()["value"]
+            hyper_params = neighbour_params
             hyper_params["fitness"] = local_fitness
+            with open('performance2.txt', 'a+') as f:
+                    f.write(f"{hyper_params}\n")
             Global.performance_history.append((hyper_params))
 
         # accept or regect neighbour

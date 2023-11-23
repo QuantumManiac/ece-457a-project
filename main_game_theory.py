@@ -22,7 +22,7 @@ AGGRESSION_MULTIPLIER = 0.25
 """Aggression multiplier to adjust how aggressive our snake is in regards to hunting down opponent"""
 MAX_DANGEROUS_ENCLOSED_SPACE = 10
 """Enclosed spaces smaller than this are considered dangerous and therefore to be avoided if the snake can't fit in them"""
-
+DANGEROUS_ENCLOSED_SPACE_REWARD = -1000
 
 turn_history = []
 
@@ -228,14 +228,6 @@ def get_possible_moves(game_state: State, player: Player) -> Set[Direction]:
                     not_safe = True
                     break
 
-        if not_safe:
-            continue
-
-        # Discard moves that lead to an enclosed space that the snake can't fit in
-        snake_size = len(game_state.state[player.value]["body"])
-        if snake_size >= MAX_DANGEROUS_ENCLOSED_SPACE and not can_fit(game_state.state, MAX_DANGEROUS_ENCLOSED_SPACE, move_coord):
-            safe_moves.discard(move)
-
     return safe_moves
 
 def can_fit(game_state: Dict[str, Any], size: int, coordinate: Dict[str, int]) -> bool:
@@ -330,7 +322,14 @@ def coord_to_reward(game_state: State, coords: Dict[str, int], player_turn: Play
         else:
             reward += 1/dist
 
+    # Reward from moving closer to opponent
     reward += AGGRESSION_MULTIPLIER * aggression_reward(game_state, player_turn)
+
+    # Negative reward if the snake is moving into a dangerous enclosed space
+    snake_size = len(game_state.state[player_turn.value]["body"])
+    if snake_size >= MAX_DANGEROUS_ENCLOSED_SPACE and not can_fit(game_state.state, MAX_DANGEROUS_ENCLOSED_SPACE, coords):
+        reward += DANGEROUS_ENCLOSED_SPACE_REWARD
+
     return reward
 
 def simplify_snake(snake: Dict[str, Any]) -> Dict[str, Any]:

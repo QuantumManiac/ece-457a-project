@@ -19,8 +19,6 @@ NUM_LAYERS = 6
 LAYER_REWARD_DECAY = 0.5 
 """Decay multiplier for rewards in each layer. This is to put higher value to sooner rewards than later ones"""
 AGGRESSION_MULTIPLIER = 0.25
-"""Aggression multiplier to adjust how aggressive our snake is in regards to hunting down opponent"""
-MAX_DANGEROUS_ENCLOSED_SPACE = 10
 """Enclosed spaces smaller than this are considered dangerous and therefore to be avoided if the snake can't fit in them"""
 DANGEROUS_ENCLOSED_SPACE_REWARD = -1000
 
@@ -327,7 +325,7 @@ def coord_to_reward(game_state: State, coords: Dict[str, int], player_turn: Play
 
     # Negative reward if the snake is moving into a dangerous enclosed space
     snake_size = len(game_state.state[player_turn.value]["body"])
-    if snake_size >= MAX_DANGEROUS_ENCLOSED_SPACE and not can_fit(game_state.state, MAX_DANGEROUS_ENCLOSED_SPACE, coords):
+    if not can_fit(game_state.state, snake_size, coords):
         reward += DANGEROUS_ENCLOSED_SPACE_REWARD
 
     return reward

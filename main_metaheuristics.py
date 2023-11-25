@@ -249,4 +249,4 @@ def assess_cost(game_state: typing.Dict, proposed_moves: typing.List):
 if __name__ == "__main__":
     from server import run_server
 
-    run_server({"info": info, "start": start, "move": move, "end": end})
+    run_server({"info": info, "start": start, "move": move, "end": end}, 8081)

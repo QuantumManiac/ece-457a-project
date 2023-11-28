@@ -31,7 +31,7 @@ class Global:
                                       'avg_health': 100, 
                                       'won_game': False}
 
-    fname = 0
+    fname = random.uniform(1,1000)
     
     @classmethod
     def reset_snake_performance(cls):
@@ -328,7 +328,7 @@ def calculate_fitness(won_game: bool):
 
 def hyper_parameter_local_search(iter_per_set, total_iter):
     # randomly set initial hyperparams
-    '''
+
     Global.fname = random.uniform(1, 10000)
     hyper_parameters = Global.get_hyper_parameters()
 
@@ -354,11 +354,9 @@ def hyper_parameter_local_search(iter_per_set, total_iter):
             # Ensure neighbour in bounds
             value[param] = bounds[0] if value[param] < bounds[0] else value[param]
             value[param] = bounds[1] if value[param] > bounds[1] else value[param]
-        '''
+
         # test neighbour
         #Global.set_hyper_parameters(neighbour_params)
-    best_fitness = 0
-    if 1 > 0:
         avg_fitness = 0
         for i in range(1, 50):
             Global.reset_snake_performance
@@ -366,19 +364,19 @@ def hyper_parameter_local_search(iter_per_set, total_iter):
             local_fitness = calculate_fitness(won_game=False)
             avg_fitness = (local_fitness + avg_fitness*(i-1)) / i
             Global.snake_performance["fitness"] = local_fitness
-            #hyper_params = neighbour_params
-            #hyper_params["fitness"] = local_fitness
-            #hyper_params["snakeP"] = Global.snake_performance
+            hyper_params = neighbour_params
+            hyper_params["fitness"] = local_fitness
+            hyper_params["snakeP"] = Global.snake_performance
             with open(f'performance{Global.fname}.txt', 'a') as f:
-                f.write(f"{Global.snake_performance["won_game"]}\n")
+                f.write(f"{hyper_params}\n")
 
         # accept or regect neighbour
         if avg_fitness > best_fitness:
             #hyper_parameters = neighbour_params
             best_fitness = avg_fitness
 
-    #Global.set_hyper_parameters(hyper_parameters)  
-    #print(f"Best HyperParams: {hyper_parameters['value']}")
+    Global.set_hyper_parameters(hyper_parameters)  
+    print(f"Best HyperParams: {hyper_parameters['value']}")
     print(f"Best Fitness: {best_fitness}")
 
     #return hyper_parameters
@@ -397,9 +395,9 @@ def run_game(run_in_browser: bool):
         command = [
             'battlesnake', 'play',
             '--name', 'meta_snake',
-            '--url', 'http://127.0.0.1:8000',
+            '--url', 'http://0.0.0.0:8000',
             "--name", "enemy_snake",
-            "--url", "http://127.0.0.1:8001"
+            "--url", "http://127.0.0.1:8080"
         ]
         '''
  
@@ -413,7 +411,7 @@ def run_game(run_in_browser: bool):
 # Start server when `python main.py` is run
 if __name__ == "__main__":
     from server import run_server as rs
-    from meta.server import run_server
+    from gt.server import run_server
 
     HYPER_PARAMETER_OPTIMIZATION = True
     server_thread = threading.Thread(target=rs, args=({"info": info, "start": start, "move": move, "end": end},))

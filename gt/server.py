@@ -6,7 +6,7 @@ from flask import Flask
 from flask import request
 
 
-def run_server(handlers: typing.Dict, port: int = 8001):
+def run_server(handlers: typing.Dict, port: int = 8080):
     app = Flask("Battlesnake")
 
     @app.get("/")
@@ -33,7 +33,7 @@ def run_server(handlers: typing.Dict, port: int = 8001):
     @app.after_request
     def identify_server(response):
         response.headers.set(
-            "server", "battlesnake/github/ece_snake"
+            "server", "battlesnake/github/ece_snake2"
         )
         return response
 

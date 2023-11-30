@@ -20,11 +20,11 @@ import sys
 import os
 
 class Global:
-    hyper_parameters: typing.Dict = {'value': {'iter': 5, 'mutation_prob':  1.0, 'food_benefit': 7,
-                                                'adj_risk': 6, 'kill_reward': 11},
+    hyper_parameters: typing.Dict = {'value': {'iter': 5, 'mutation_prob':  1.0, 'food_benefit': 5,
+                                                'adj_risk': 15, 'kill_reward': 17},
                                       'range': {'iter': [1, 5], 'mutation_prob': [0.0, 1.0],
-                                                'food_benefit': [2,10], 'adj_risk': [1,12],
-                                                'kill_reward':[5,20]}}
+                                                'food_benefit': [2,7], 'adj_risk': [8,13],
+                                                'kill_reward':[15,20]}}
     snake_performance: typing.Dict = {'turns_alive': 0, 
                                       'num_kills': 0, 
                                       'snake_size': 1, 
@@ -300,9 +300,6 @@ def assess_cost(game_state: typing.Dict, proposed_moves: typing.List):
     return est_cost
 
 def calculate_fitness(won_game: bool):
-    # TODO: to come up with an optimal weighting for these
-    # I would say it should be Win > Survival >> size > kill > health
-    # also depending on the type of game (solo or versus) it would be slightly adjusted
     WIN_TIME_GAIN = 50000 # if playing alone
     SURVIVAL_TIME_GAIN = 0.2 # maybe make this negative
     KILL_GAIN = 1 # if playing alone
@@ -321,7 +318,7 @@ def calculate_fitness(won_game: bool):
         fitness += WIN_TIME_GAIN / snake_performance['turns_alive'] 
     else:
         # should add some punishment if it loses
-        fitness = 0
+        fitness += SURVIVAL_TIME_GAIN*snake_performance['turns_alive']
     
     return fitness
     
@@ -429,8 +426,8 @@ if __name__ == "__main__":
         sys.exit()
 
     # TODO: Likely need to change these values
-    INNER_LOOP_ITERATIONS = 40
-    OUTER_LOOP_ITERATIONS = 100
+    INNER_LOOP_ITERATIONS = 20
+    OUTER_LOOP_ITERATIONS = 20
 
     hyper_parameter_local_search(INNER_LOOP_ITERATIONS, OUTER_LOOP_ITERATIONS)
     sys.exit()
